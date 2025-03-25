@@ -5,30 +5,31 @@ const userSchema = new Schema({
   name: String,
   email: {
     type: String,
+    required: true,
+    unique: true, // Creates unique index automatically
     trim: true,
-    minlength: 3,
+    lowercase: true
+  },
+  kycId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'KYC' 
   },
   photoURL: String,
-  ContactNo: {
-    type: String, // Changed to String to handle country codes
-    default: "+1234567890",
-  },
+  phoneNumber: String,
   role: {
     type: String,
     enum: ['user', 'admin'],
-    default: 'user',
+    default: 'user'
   },
   kycVerified: {
     type: Boolean,
     default: false,
+    index: true // Helps query verified users faster
   },
   phoneVerified: {
     type: Boolean,
-    default: false,
-  },
-  otp: String,
-  otpExpires: Date
-});
+    default: false
+  }
+}, { timestamps: true });
 
-const User = mongoose.model('User', userSchema);
-module.exports = User;
+module.exports = mongoose.model('User', userSchema);

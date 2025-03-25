@@ -1,26 +1,33 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-const KYCSchema = new mongoose.Schema(
-  {
-    firstName: String,
-    lastName: String,
-    email: String,
-    phoneNumber: String,
-    dateOfBirth: Date,
-    permanentAddress: {
-      province: String,
-      district: String,
-      ward: String,
-    },
-    temporaryAddress: {
-      province: String,
-      district: String,
-      ward: String,
-    },
-    documentUrl: String,
-    verified: { type: Boolean, default: false },
+const addressSchema = new Schema({
+  province: String,
+  district: String,
+  municipality: String, 
+  ward: String
+}, { _id: false });
+
+const KYCSchema = new Schema({
+  firstName: String,
+  lastName: String,
+  email: { type: String, unique: true },
+  phoneNumber: String,
+  documentNumber: {
+    type: String,
+    default: "Not Given"
   },
-  { timestamps: true }
-);
+  dateOfBirth: Date,
+  permanentAddress: addressSchema,
+  temporaryAddress: addressSchema,
+  documentUrls: [String],
+  status: {
+    type: String,
+    enum: ['PENDING', 'APPROVED', 'REJECTED', 'NEEDS_CORRECTION'],
+    default: 'PENDING'
+  },
+  adminFeedback: String,
+  lastReviewedAt: Date
+}, { timestamps: true });
 
-module.exports = mongoose.model("KYC", KYCSchema);
+module.exports = mongoose.model('KYC', KYCSchema);

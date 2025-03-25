@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useContext } from "react";
+import { FaHome, FaBuilding, FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
-import logo from "/logo.png"; // Replace with your logo path
+import logo from "/logo.png";
 import axios from "axios";
 import useAxiosPublic from "../hooks/useAxiosPublic";
-import { AuthContext } from "../Contexts/AuthProvider"; // Import AuthContext
+import { AuthContext } from "../Contexts/AuthProvider";
 
 const KYCForm = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const axiosPublic = useAxiosPublic();
-
-  // Access user data from AuthContext
   const { user } = useContext(AuthContext);
 
   const [formData, setFormData] = useState({
@@ -19,36 +18,85 @@ const KYCForm = () => {
     lastName: "",
     email: "",
     phoneNumber: "",
+    documentNumber: "",
     dateOfBirth: "",
     permanentAddress: {
       province: "",
       district: "",
+      municipality: "",
       ward: "",
     },
     temporaryAddress: {
       province: "",
       district: "",
+      municipality: "",
       ward: "",
     },
-    documents: [], // For file uploads
+    documents: [],
   });
 
-  const [loading, setLoading] = useState(false); // Loading state for submission
-  const [error, setError] = useState(""); // Error state for submission
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [kycStatus, setKycStatus] = useState(null);
+  const [adminFeedback, setAdminFeedback] = useState("");
+  const [showForm, setShowForm] = useState(true);
 
-  // Populate formData with user data when the component mounts or user changes
+  // Check existing KYC status on load
   useEffect(() => {
-    if (user) {
-      setFormData((prevData) => ({
-        ...prevData,
-        firstName: user.displayName?.split(" ")[0] || "", // Extract first name
-        lastName: user.displayName?.split(" ")[1] || "", // Extract last name
-        email: user.email || "", // Use user's email
+    if (user?.email) {
+      checkKYCStatus(user.email);
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.displayName?.split(" ")[0] || "",
+        lastName: user.displayName?.split(" ")[1] || "",
+        email: user.email || ""
       }));
     }
   }, [user]);
 
-  const handleNext = () => setStep(step + 1);
+  const checkKYCStatus = async (email) => {
+    try {
+      const response = await axiosPublic.get(`/kyc/email/${email}/status`);
+      setKycStatus(response.data.data.status);
+      setAdminFeedback(response.data.data.adminFeedback || "");
+  
+      if (response.data.data.status === "NEEDS_CORRECTION") {
+        const kycDetails = await axiosPublic.get(`/kyc/email/${email}`);
+        setFormData(prev => ({
+          ...prev,
+          ...kycDetails.data.data,
+          documents: [] // Clear documents to force re-upload
+        }));
+        setShowForm(false); // Hide form initially for correction cases
+      } else if (response.data.data.status === "APPROVED" || response.data.data.status === "REJECTED") {
+        setShowForm(false); // Hide form for finalized statuses
+      } else if (response.data.data.status === "PENDING") {
+        setShowForm(false); // Hide form for pending status
+      } else {
+        setShowForm(true); // Show form for other cases (no KYC exists)
+      }
+    } catch (error) {
+      console.log("No existing KYC found - showing form");
+      setShowForm(true); // Show form if no KYC exists
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNext = () => {
+    // Validate current step before proceeding
+    if (step === 1) {
+      if (!formData.phoneNumber) {
+        setError("Phone number is required");
+        return;
+      }
+    }
+    setStep(step + 1);
+  };
+
   const handlePrevious = () => setStep(step - 1);
 
   const handleChange = (e) => {
@@ -89,63 +137,115 @@ const KYCForm = () => {
     event.preventDefault();
     setLoading(true);
     setError("");
-
+  
     try {
+      // Validation checks (your existing code)
       if (formData.documents.length === 0) {
         setError("Please upload at least one document.");
         setLoading(false);
         return;
       }
-
-      // Upload all documents one by one
+  
+      // Upload documents (your existing code)
       const uploadedImages = await Promise.all(
         formData.documents.map(async (file) => {
           const formDataToSend = new FormData();
           formDataToSend.append("image", file);
-
-          const imgbbResponse = await axios.post("https://api.imgbb.com/1/upload", formDataToSend, {
-            params: { key: import.meta.env.VITE_IMAGE_HOSTING_KEY },
-          });
-
-          return imgbbResponse.data.success ? imgbbResponse.data.data.url : null;
+          const response = await axios.post(
+            "https://api.imgbb.com/1/upload", 
+            formDataToSend,
+            { params: { key: import.meta.env.VITE_IMAGE_HOSTING_KEY } }
+          );
+          return response.data.data.url;
         })
       );
-
-      if (uploadedImages.includes(null)) {
-        setError("Some documents failed to upload. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      // Prepare KYC data for backend
-      const kycData = {
+  
+      // Prepare submission data
+      const submissionData = {
         ...formData,
         documentUrls: uploadedImages,
+        status: "PENDING" // Reset status when resubmitting
       };
-
-      console.log("Payload being sent to backend:", kycData); // Log the payload
-
-      // Send KYC data to backend
-      const backendResponse = await axiosPublic.post("/kyc", kycData);
-
-      if (backendResponse.status === 201) {
-        navigate("/");
-      } else {
-        setError("Error submitting KYC. Please try again.");
+  
+      // Submit to backend
+      const response = await axiosPublic.post("/kyc", submissionData);
+      
+      if (response.status === 200 || response.status === 201) {
+        navigate("/kycstatus", {
+          state: { 
+            message: kycStatus === "NEEDS_CORRECTION" 
+              ? "KYC updated successfully!" 
+              : "KYC submitted successfully!"
+          }
+        });
       }
     } catch (error) {
-      console.error("Error during KYC submission:", error);
-      console.error("Backend response:", error.response?.data); // Log the full response
-      setError(error.response?.data?.message || "An error occurred. Please try again.");
+      setError(error.response?.data?.message || "Submission failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Render KYC status view if not showing form
+  if ((kycStatus === "APPROVED" || kycStatus === "REJECTED" || kycStatus === "PENDING") && !showForm) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="w-full max-w-2xl bg-white rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">KYC Status: {kycStatus}</h2>
+          {kycStatus === "REJECTED" && adminFeedback && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
+              <h3 className="font-semibold text-red-800">Admin Feedback:</h3>
+              <p className="text-red-700">{adminFeedback}</p>
+            </div>
+          )}
+          <button 
+            onClick={() => navigate("/")}
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Needs correction screen
+  if (kycStatus === "NEEDS_CORRECTION" && !showForm) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="w-full max-w-2xl bg-white rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4 text-yellow-600">
+            KYC Needs Correction
+          </h2>
+          {adminFeedback && (
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-left">
+              <h3 className="font-semibold text-yellow-800">Admin Feedback:</h3>
+              <p className="text-yellow-700">{adminFeedback}</p>
+            </div>
+          )}
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setStep(1);
+            }}
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Edit and Resubmit
+          </button>
+          <button
+            onClick={() => navigate("/")}
+            className="ml-4 px-6 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+  // Render the KYC form
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-2xl bg-white rounded-lg shadow-lg p-8 relative">
-        {/* Close Button */}
         <button
           onClick={() => navigate("/")}
           className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
@@ -153,31 +253,26 @@ const KYCForm = () => {
           <IoClose size={24} />
         </button>
 
-        {/* Logo and Heading */}
         <div className="text-center mb-6">
           <img src={logo} alt="Logo" className="h-12 mx-auto" />
-          <h1 className="text-2xl font-bold mt-4">KYC Verification</h1>
+          <h1 className="text-2xl font-bold mt-4">
+            {kycStatus === "NEEDS_CORRECTION" ? "Update KYC Information" : "KYC Verification"}
+          </h1>
           <p className="text-gray-600">Step {step} of 3</p>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
             {error}
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Step 1: Personal Details */}
           {step === 1 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold">Personal Details</h2>
-              <p className="text-gray-600">
-                Please type carefully and fill out the form with your personal details. You can’t
-                edit these details once you submit the form.
-              </p>
-
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">First Name *</label>
@@ -188,7 +283,7 @@ const KYCForm = () => {
                     onChange={handleChange}
                     className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
                     required
-                    disabled // Disable editing
+                    disabled
                   />
                 </div>
                 <div>
@@ -200,11 +295,11 @@ const KYCForm = () => {
                     onChange={handleChange}
                     className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
                     required
-                    disabled // Disable editing
+                    disabled
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email Address *</label>
+                  <label className="block text-sm font-medium text-gray-700">Email *</label>
                   <input
                     type="email"
                     name="email"
@@ -212,7 +307,7 @@ const KYCForm = () => {
                     onChange={handleChange}
                     className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
                     required
-                    disabled // Disable editing
+                    disabled
                   />
                 </div>
                 <div>
@@ -238,11 +333,19 @@ const KYCForm = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-between">
                 <button
                   type="button"
+                  className="px-6 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500"
+                  onClick={handlePrevious}
+                  disabled={step === 1}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                   onClick={handleNext}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   Next
                 </button>
@@ -252,99 +355,193 @@ const KYCForm = () => {
 
           {/* Step 2: Address Details */}
           {step === 2 && (
+  <div className="space-y-6">
+    <h2 className="text-xl font-semibold">Address Details</h2>
+    
+    {/* Permanent Address Section */}
+    <div className="bg-gray-50 p-4 rounded-lg">
+      <h3 className="text-lg font-medium mb-4 flex items-center">
+        <FaHome className="mr-2 text-blue-600" />
+        Permanent Address *
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Province</label>
+          <input
+            type="text"
+            name="province"
+            value={formData.permanentAddress.province}
+            onChange={(e) => handleAddressChange(e, "permanentAddress")}
+            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">District</label>
+          <input
+            type="text"
+            name="district"
+            value={formData.permanentAddress.district}
+            onChange={(e) => handleAddressChange(e, "permanentAddress")}
+            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Municipality</label>
+          <input
+            type="text"
+            name="municipality"
+            value={formData.permanentAddress.municipality}
+            onChange={(e) => handleAddressChange(e, "permanentAddress")}
+            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Ward</label>
+          <input
+            type="number"
+            name="ward"
+            value={formData.permanentAddress.ward}
+            onChange={(e) => handleAddressChange(e, "permanentAddress")}
+            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* Temporary Address Section */}
+    <div className="bg-gray-50 p-4 rounded-lg">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-medium flex items-center">
+          <FaBuilding className="mr-2 text-blue-600" />
+          Temporary Address
+        </h3>
+        <label className="flex items-center text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={
+              formData.permanentAddress.province === formData.temporaryAddress.province &&
+              formData.permanentAddress.district === formData.temporaryAddress.district &&
+              formData.permanentAddress.municipality === formData.temporaryAddress.municipality &&
+              formData.permanentAddress.ward === formData.temporaryAddress.ward
+            }
+            onChange={handleCopyAddress}
+            className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          Same as Permanent Address
+        </label>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Province</label>
+          <input
+            type="text"
+            name="province"
+            value={formData.temporaryAddress.province}
+            onChange={(e) => handleAddressChange(e, "temporaryAddress")}
+            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            disabled={formData.permanentAddress.province === formData.temporaryAddress.province &&
+              formData.permanentAddress.district === formData.temporaryAddress.district &&
+              formData.permanentAddress.municipality === formData.temporaryAddress.municipality &&
+              formData.permanentAddress.ward === formData.temporaryAddress.ward}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">District</label>
+          <input
+            type="text"
+            name="district"
+            value={formData.temporaryAddress.district}
+            onChange={(e) => handleAddressChange(e, "temporaryAddress")}
+            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            disabled={formData.permanentAddress.province === formData.temporaryAddress.province &&
+              formData.permanentAddress.district === formData.temporaryAddress.district &&
+              formData.permanentAddress.municipality === formData.temporaryAddress.municipality &&
+              formData.permanentAddress.ward === formData.temporaryAddress.ward}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Municipality</label>
+          <input
+            type="text"
+            name="municipality"
+            value={formData.temporaryAddress.municipality}
+            onChange={(e) => handleAddressChange(e, "temporaryAddress")}
+            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            disabled={formData.permanentAddress.province === formData.temporaryAddress.province &&
+              formData.permanentAddress.district === formData.temporaryAddress.district &&
+              formData.permanentAddress.municipality === formData.temporaryAddress.municipality &&
+              formData.permanentAddress.ward === formData.temporaryAddress.ward}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Ward</label>
+          <input
+            type="number"
+            name="ward"
+            value={formData.temporaryAddress.ward}
+            onChange={(e) => handleAddressChange(e, "temporaryAddress")}
+            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            disabled={formData.permanentAddress.province === formData.temporaryAddress.province &&
+              formData.permanentAddress.district === formData.temporaryAddress.district &&
+              formData.permanentAddress.municipality === formData.temporaryAddress.municipality &&
+              formData.permanentAddress.ward === formData.temporaryAddress.ward}
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* Navigation Buttons */}
+    <div className="flex justify-between pt-4">
+      <button
+        type="button"
+        onClick={handlePrevious}
+        className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        <FaArrowLeft className="mr-2" />
+        Back
+      </button>
+      <button
+        type="button"
+        onClick={handleNext}
+        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        Next
+        <FaArrowRight className="ml-2" />
+      </button>
+    </div>
+  </div>
+)}
+
+          {/* Step 3: Document Upload */}
+          {step === 3 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold">Address Details</h2>
-              <p className="text-gray-600">
-                Please provide your permanent and temporary address details.
-              </p>
-
-              {/* Permanent Address */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Permanent Address</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Province *</label>
-                    <input
-                      type="text"
-                      name="province"
-                      value={formData.permanentAddress.province}
-                      onChange={(e) => handleAddressChange(e, "permanentAddress")}
-                      className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">District *</label>
-                    <input
-                      type="text"
-                      name="district"
-                      value={formData.permanentAddress.district}
-                      onChange={(e) => handleAddressChange(e, "permanentAddress")}
-                      className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Ward *</label>
-                    <input
-                      type="text"
-                      name="ward"
-                      value={formData.permanentAddress.ward}
-                      onChange={(e) => handleAddressChange(e, "permanentAddress")}
-                      className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Temporary Address */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Temporary Address</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Province *</label>
-                    <input
-                      type="text"
-                      name="province"
-                      value={formData.temporaryAddress.province}
-                      onChange={(e) => handleAddressChange(e, "temporaryAddress")}
-                      className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">District *</label>
-                    <input
-                      type="text"
-                      name="district"
-                      value={formData.temporaryAddress.district}
-                      onChange={(e) => handleAddressChange(e, "temporaryAddress")}
-                      className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Ward *</label>
-                    <input
-                      type="text"
-                      name="ward"
-                      value={formData.temporaryAddress.ward}
-                      onChange={(e) => handleAddressChange(e, "temporaryAddress")}
-                      className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end mt-4">
-                  <button
-                    type="button"
-                    onClick={handleCopyAddress}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    Copy Permanent Address
-                  </button>
-                </div>
+              <h2 className="text-xl font-semibold">Document Upload</h2>
+              <div>
+              <label className="block text-sm font-medium text-gray-700">Document No.*</label>
+              <input
+                type="tel"
+                name="documentNumber" // Must match state key
+                value={formData.documentNumber}
+                onChange={handleInputChange} // Now defined!
+                className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Upload Documents *</label>
+                <input
+                  type="file"
+                  name="documents"
+                  multiple
+                  onChange={handleFileChange}
+                  className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-200 focus:outline-none"
+                  required
+                />
               </div>
 
               <div className="flex justify-between">
@@ -356,42 +553,9 @@ const KYCForm = () => {
                   Back
                 </button>
                 <button
-                  type="button"
-                  onClick={handleNext}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: File Upload */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold">Document Upload</h2>
-              <p className="text-gray-600">
-                Please upload a valid image document (ID card, passport, etc.).
-              </p>
-              <input
-                type="file"
-                onChange={handleFileChange}
-                accept="image/*"
-                className="block w-full p-2 mt-4 border border-gray-300 rounded-md focus:ring focus:ring-blue-200 focus:outline-none"
-                required
-              />
-              <div className="flex justify-between mt-6">
-                <button
-                  type="button"
-                  onClick={handlePrevious}
-                  className="px-6 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500"
-                >
-                  Back
-                </button>
-                <button
                   type="submit"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                   disabled={loading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
                 >
                   {loading ? "Submitting..." : "Submit"}
                 </button>

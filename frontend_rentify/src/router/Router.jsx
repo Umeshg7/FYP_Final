@@ -15,6 +15,7 @@ import ItemDetail from "../components/ItemDetails"; // Add the import here
 import ItemDetails from "../components/ItemDetails";
 import KYCForm from "../components/KYCForm";
 import AdminPanel from "../pages/dashboard/admin/AdminPanel";
+import KYCStatus from "../components/KYCStatus";
 
 const router = createBrowserRouter([
   {
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
   {
     path : "kycverify",
     element : <KYCForm/>
+  },
+  {
+    path : "kycstatus",
+    element : <KYCStatus/>
   },
   {
     path: "dashboard",

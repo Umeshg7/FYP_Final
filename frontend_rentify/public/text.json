@@ -1,0 +1,82 @@
+[
+    {
+      "id": 1,
+      "name": "Classic Margherita Pizza",
+      "recipe": "Fresh tomatoes, mozzarella cheese, basil, and olive oil on a thin crust.",
+      "image": "/musical.png",
+      "category": "popular",
+      "price": 12.99
+    },
+    {
+      "id": 2,
+      "name": "Spicy Chicken Tacos",
+      "recipe": "Grilled chicken, spicy salsa, lettuce, and cheese in a soft tortilla.",
+      "image": "/others.png",
+      "category": "popular",
+      "price": 9.99
+    },
+    {
+      "id": 3,
+      "name": "Vegetarian Sushi Roll",
+      "recipe": "Avocado, cucumber, and carrots wrapped in sushi rice and seaweed.",
+      "image": "/others.png",
+      "category": "popular",
+      "price": 14.99
+    },
+    {
+      "id": 4,
+      "name": "Beef Burger",
+      "recipe": "Juicy beef patty, cheddar cheese, lettuce, tomato, and special sauce on a sesame bun.",
+      "image": "/others.png",
+      "category": "popular",
+      "price": 11.99
+    },
+    {
+      "id": 5,
+      "name": "Chocolate Lava Cake",
+      "recipe": "Warm chocolate cake with a gooey molten center, served with vanilla ice cream.",
+      "image": "/others.png",
+      "category": "dessert",
+      "price": 7.99
+    },
+    {
+      "id": 6,
+      "name": "Caesar Salad",
+      "recipe": "Crisp romaine lettuce, croutons, parmesan cheese, and Caesar dressing.",
+      "image": "/others.png",
+      "category": "salad",
+      "price": 8.99
+    },
+    {
+      "id": 7,
+      "name": "Grilled Salmon",
+      "recipe": "Fresh salmon fillet grilled to perfection, served with steamed vegetables.",
+      "image": "/others.png",
+      "category": "seafood",
+      "price": 18.99
+    },
+    {
+      "id": 8,
+      "name": "Vegetable Stir Fry",
+      "recipe": "Assorted vegetables stir-fried in a savory sauce, served with rice.",
+      "image": "/others.png",
+      "category": "vegetarian",
+      "price": 10.99
+    },
+    {
+      "id": 9,
+      "name": "BBQ Ribs",
+      "recipe": "Slow-cooked pork ribs coated in BBQ sauce, served with coleslaw and fries.",
+      "image": "/others.png",
+      "category": "meat",
+      "price": 22.99
+    },
+    {
+      "id": 10,
+      "name": "Mango Smoothie",
+      "recipe": "Blended mango, yogurt, and honey for a refreshing drink.",
+      "image": "/house.png",
+      "category": "beverage",
+      "price": 5.99
+    }
+  ]

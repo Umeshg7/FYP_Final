@@ -5,7 +5,7 @@ import { IoClose } from "react-icons/io5";
 import { useForm } from "react-hook-form";
 import useAuth from "../hooks/useAuth";
 import useAxiosPublic from "../hooks/useAxiosPublic";
-import logo from '/logo.png';
+import logo from "/logo.png";
 
 const Login = () => {
   const [errorMessage, setErrorMessage] = useState("");
@@ -25,14 +25,31 @@ const Login = () => {
   const onSubmit = (data) => {
     login(data.email, data.password)
       .then((result) => {
+        // Prepare user data for MongoDB
         const userInfo = {
-          name: data.name,
+          name: result.user.displayName || data.name, // Use displayName from Firebase or name from form
           email: data.email,
+          photoURL: result.user.photoURL || "", // Use photoURL from Firebase if available
+          role: "user", // Default role
         };
-        axiosPublic.post("/users", userInfo).then(() => {
-          alert("Login successful!");
-          navigate(from, { replace: true });
-        });
+
+        console.log("Sending user data to backend:", userInfo); // Log the payload
+
+        // Send user data to backend
+        axiosPublic
+          .post("/users", userInfo)
+          .then(() => {
+            alert("Login successful!");
+            navigate(from, { replace: true });
+          })
+          .catch((error) => {
+            console.error("Error posting user data:", error); // Log the error
+            if (error.response?.status === 302) {
+              alert("User already exists!");
+            } else {
+              setErrorMessage("Failed to save user data. Please try again.");
+            }
+          });
       })
       .catch(() => {
         setErrorMessage("Please provide a valid email & password!");
@@ -43,16 +60,36 @@ const Login = () => {
   const handleGoogleLogin = () => {
     signUpWithGmail()
       .then((result) => {
+        // Prepare user data for MongoDB
         const userInfo = {
-          name: result?.user?.displayName,
-          email: result?.user?.email,
+          name: result.user.displayName || "Unknown", // Use displayName from Firebase
+          email: result.user.email,
+          photoURL: result.user.photoURL || "", // Use photoURL from Firebase if available
+          role: "user", // Default role
         };
-        axiosPublic.post("/users", userInfo).then(() => {
-          alert("Login successful!");
-          navigate("/");
-        });
+
+        console.log("Sending user data to backend:", userInfo); // Log the payload
+
+        // Send user data to backend
+        axiosPublic
+          .post("/users", userInfo)
+          .then(() => {
+            alert("Login successful!");
+            navigate("/");
+          })
+          .catch((error) => {
+            console.error("Error posting user data:", error); // Log the error
+            if (error.response?.status === 302) {
+              alert("User already exists!");
+            } else {
+              setErrorMessage("Failed to save user data. Please try again.");
+            }
+          });
       })
-      .catch((error) => console.log(error));
+      .catch((error) => {
+        console.error("Google login error:", error);
+        setErrorMessage("Failed to login with Google. Please try again.");
+      });
   };
 
   return (
@@ -77,7 +114,9 @@ const Login = () => {
               className="input input-bordered w-full"
               {...register("email", { required: "Email is required" })}
             />
-            {errors.email && <p className="text-red-500 text-xs">{errors.email.message}</p>}
+            {errors.email && (
+              <p className="text-red-500 text-xs">{errors.email.message}</p>
+            )}
           </div>
 
           <div className="form-control">
@@ -88,19 +127,30 @@ const Login = () => {
               className="input input-bordered w-full"
               {...register("password", { required: "Password is required" })}
             />
-            {errors.password && <p className="text-red-500 text-xs">{errors.password.message}</p>}
+            {errors.password && (
+              <p className="text-red-500 text-xs">{errors.password.message}</p>
+            )}
           </div>
 
-          {errorMessage && <p className="text-red-500 text-xs text-center">{errorMessage}</p>}
+          {errorMessage && (
+            <p className="text-red-500 text-xs text-center">{errorMessage}</p>
+          )}
 
           <div className="form-control mt-4">
-            <button type="submit" className="btn bg-purple-yellow-gradient text-white w-full">Login</button>
+            <button
+              type="submit"
+              className="btn bg-purple-yellow-gradient text-white w-full"
+            >
+              Login
+            </button>
           </div>
         </form>
 
         <p className="text-center my-3">
           Don't have an account?
-          <Link to="/signup" className="underline text-purple ml-2">Sign Up Now</Link>
+          <Link to="/signup" className="underline text-purple ml-2">
+            Sign Up Now
+          </Link>
         </p>
 
         <div className="form-control mt-4 text-center">

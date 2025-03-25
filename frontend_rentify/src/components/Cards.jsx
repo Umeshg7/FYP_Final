@@ -14,16 +14,14 @@ const Cards = ({ item }) => {
       <div className="card bg-base-100 w-96 shadow-xl relative border-2 border-purple rounded-lg">
         {/* Heart Icon */}
         <div
-          className={`rating gap-1 absolute right-2 top-2 p-4 heartStar bg-purple ${
-            isHeartFilled ? 'text-rose-500' : 'text-white'
-          }`}
+          className={`rating gap-1 absolute right-2 top-2 p-4 heartStar bg-purple ${isHeartFilled ? 'text-rose-500' : 'text-white'}`}
           onClick={handleHeartClick}
         >
           <FaHeart className="h-5 w-5 cursor-pointer" />
         </div>
 
         {/* Image and Link */}
-        <Link to={`/menu/${item._id}`}>
+        <Link to={`/item/${item._id}`}>
           <figure>
             <img
               src={item.images && item.images.length > 0 ? item.images[0] : '/placeholder.jpg'}

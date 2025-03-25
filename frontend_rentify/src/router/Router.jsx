@@ -3,66 +3,86 @@ import Main from "../layout/Main";
 import Home from "../pages/home/home";
 import Rent from "../pages/home/Shop/Rent";
 import Signup from "../components/Signup";
-import Login from "../components/Login"
+import Login from "../components/Login";
 import UpdateProfile from "../pages/userDashboard/UpdateProfile";
 import DashboardLayout from "../layout/DashboardLayout";
 import Dashboard from "../pages/dashboard/admin/Dashboard";
 import Users from "../pages/dashboard/admin/Users";
 import AddRentItem from "../pages/dashboard/admin/AddRentItem";
-import VerifyItem from "../pages/dashboard/admin/VerifyItem"
-
-
+import VerifyItem from "../pages/dashboard/admin/verifyItem";
+import ManageItems from "../pages/dashboard/admin/ManageItems";
+import ItemDetail from "../components/ItemDetails"; // Add the import here
+import ItemDetails from "../components/ItemDetails";
+import KYCForm from "../components/KYCForm";
+import AdminPanel from "../pages/dashboard/admin/AdminPanel";
 
 const router = createBrowserRouter([
-    {
-        path : "/",
-        element: <Main/>,
-        children : [
-            {
-                path : "/",
-                element: <Home/>
-            },
-            {
-                path : "/rent",
-                element : <Rent/>
-            },
-            {
-                path : "/updateprofile",
-                element : <UpdateProfile/>
-            }
-        ]
-    },
+  {
+    path: "/",
+    element: <Main />,
+    children: [
+      {
+        path: "/",
+        element: <Home />,
+      },
+      {
+        path: "/rent",
+        element: <Rent />,
+      },
+      {
+        path: "/updateprofile",
+        element: <UpdateProfile />,
+      },
+      {
+        path: "/item/:id", // This is the dynamic route for item details
+        element: <ItemDetails />, // Add the component here
+      },
+    ],
+  },
 
-    {
-        path : "/login",
-        element : <Login/>
-    },
-    {
-        path : "/signup",
-        element : <Signup/>
-    },
-    {
-        path : "dashboard",
-        element : <DashboardLayout/>,
-        children : [
-            {
-                path : '',
-                element : <Dashboard/>
-            },
-            {
-                path: 'users',
-                element : <Users/>
-            },
-            {
-                path: 'addrentitem',
-                element : <AddRentItem/>
-            },
-            {
-                path : "verifyitem",
-                element : <VerifyItem/>
-            }
-        ]
-    }
+  {
+    path: "/login",
+    element: <Login />,
+  },
+  {
+    path: "/signup",
+    element: <Signup />,
+  },
+  {
+    path : "kycverify",
+    element : <KYCForm/>
+  },
+  {
+    path: "dashboard",
+    element: <DashboardLayout />,
+    children: [
+      {
+        path: "",
+        element: <Dashboard />,
+      },
+      {
+        path: "users",
+        element: <Users />,
+      },
+      {
+        path: "addrentitem",
+        element: <AddRentItem />,
+      },
+      {
+        path: "verifyitem",
+        element: <VerifyItem />,
+      },
+      {
+        path: "manageitems",
+        element: <ManageItems />,
+      },
+
+      {
+        path: "verifykycadmin",
+        element: <AdminPanel/>,
+      },
+    ],
+  },
 ]);
 
 export default router;

@@ -12,7 +12,7 @@ const Users = () => {
       return res.data;
     },
   });
-  // console.log(users);
+  console.log(users);
   const handleMakeAdmin = (user) => {
     axiosSecure.patch(`/users/admin/${user._id}`).then((res) => {
       alert(`${user.name} is now admin`);
@@ -41,6 +41,7 @@ const Users = () => {
             <thead className="bg-purple text-white rounded-lg">
               <tr>
                 <th>#</th>
+                <th>Profile</th>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
@@ -51,7 +52,15 @@ const Users = () => {
               {users.map((user, index) => (
                 <tr key={index}>
                   <th>{index + 1}</th>
+                  <td>
+                      <img
+                        src={user.photoURL || "https://via.placeholder.com/50"} // Use a placeholder if photoURL is missing
+                        alt={user.name || "User"}
+                        className="w-8 h-8 rounded-full object-cover" // Adjust size and styling as needed
+                      />
+                    </td>
                   <td>{user.name}</td>
+
                   <td>{user.email}</td>
                   <td>
                     {user.role === "admin" ? (

@@ -5,7 +5,7 @@ import { IoClose } from "react-icons/io5";
 import { useForm } from "react-hook-form";
 import { AuthContext } from "../Contexts/AuthProvider";
 import useAxiosPublic from "../hooks/useAxiosPublic";
-import logo from '/logo.png';
+import logo from "/logo.png";
 
 const Signup = () => {
   const [errorMessage, setErrorMessage] = useState("");
@@ -22,16 +22,34 @@ const Signup = () => {
   const onSubmit = (data) => {
     createUser(data.email, data.password)
       .then((result) => {
+        // Update user profile with name and photoURL (if available)
         updateUserProfile(data.name, "")
           .then(() => {
+            // Prepare user data for MongoDB
             const userInfo = {
               name: data.name,
               email: data.email,
+              photoURL: result.user.photoURL || "", // Use photoURL from Firebase if available
+              role: "user", // Default role
             };
-            axiosPublic.post("/users", userInfo).then(() => {
-              alert("Signup successful!");
-              navigate("/");
-            });
+
+            console.log("Sending user data to backend:", userInfo); // Log the payload
+
+            // Send user data to backend
+            axiosPublic
+              .post("/users", userInfo)
+              .then(() => {
+                alert("Signup successful!");
+                navigate("/");
+              })
+              .catch((error) => {
+                console.error("Error posting user data:", error); // Log the error
+                if (error.response?.status === 302) {
+                  alert("User already exists!");
+                } else {
+                  setErrorMessage("Failed to save user data. Please try again.");
+                }
+              });
           });
       })
       .catch(() => setErrorMessage("Signup failed. Please try again."));
@@ -40,14 +58,31 @@ const Signup = () => {
   const handleGoogleRegister = () => {
     signUpWithGmail()
       .then((result) => {
+        // Prepare user data for MongoDB
         const userInfo = {
-          name: result.user.displayName,
+          name: result.user.displayName || "Unknown", // Use displayName from Firebase
           email: result.user.email,
+          photoURL: result.user.photoURL || "", // Use photoURL from Firebase if available
+          role: "user", // Default role
         };
-        axiosPublic.post("/users", userInfo).then(() => {
-          alert("Signup successful!");
-          navigate("/");
-        });
+
+        console.log("Sending user data to backend:", userInfo); // Log the payload
+
+        // Send user data to backend
+        axiosPublic
+          .post("/users", userInfo)
+          .then(() => {
+            alert("Signup successful!");
+            navigate("/");
+          })
+          .catch((error) => {
+            console.error("Error posting user data:", error); // Log the error
+            if (error.response?.status === 302) {
+              alert("User already exists!");
+            } else {
+              setErrorMessage("Failed to save user data. Please try again.");
+            }
+          });
       })
       .catch(() => setErrorMessage("Google signup failed. Try again."));
   };

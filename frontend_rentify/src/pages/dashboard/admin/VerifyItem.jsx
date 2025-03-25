@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaCheck, FaTimes } from "react-icons/fa";
 import useAxiosPublic from "../../../hooks/useAxiosPublic";
 import Swal from "sweetalert2"; // Import SweetAlert2
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const VerifyItem = () => {
   const axiosPublic = useAxiosPublic();
@@ -9,6 +10,7 @@ const VerifyItem = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const navigate = useNavigate(); // Initialize useNavigate
 
   // Fetch items that need verification
   const fetchItems = async () => {
@@ -70,6 +72,11 @@ const VerifyItem = () => {
     });
   };
 
+  // Navigate to item details page
+  const handleViewDetails = (itemId) => {
+    navigate(`/item/${itemId}`); // Navigate to the item details page with the item's ID
+  };
+
   if (loading) {
     return <div className="text-center mt-5">Loading...</div>;
   }
@@ -99,18 +106,18 @@ const VerifyItem = () => {
             </thead>
             <tbody>
               {items.map((item, index) => (
-                <tr key={item._id}>
+                <tr key={item._id} onClick={() => handleViewDetails(item._id)}> {/* Add click handler */}
                   <th>{index + 1}</th>
                   <td>
                     <img
-                      src={item.imageUrl}
-                      alt={item.title}
+                      src={item.images[0] || "default-image.jpg"}
+                      alt={item.title || "Image not available"}
                       className="w-16 h-16 object-cover rounded-md"
                     />
                   </td>
                   <td>{item.title}</td>
                   <td>{item.category}</td>
-                  <td>${item.pricePerDay}</td>
+                  <td>NPR {item.pricePerDay}</td>
                   <td>{item.userEmail}</td>
                   <td>
                     <button

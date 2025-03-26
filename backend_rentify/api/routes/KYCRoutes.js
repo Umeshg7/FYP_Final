@@ -2,33 +2,29 @@ const express = require('express');
 const router = express.Router();
 const {
   createOrUpdateKYC,
-  updateKYCStatusByEmail,
-  getKYCByEmail,
-  getKYCStatusByEmail,
+  updateKYCStatus,
+  getKYCByUser,
+  getKYCStatus,
   getAllKYCs,
-  getKYCStats,
-  deleteKYCByEmail
+  deleteKYC
 } = require('../controllers/KYCController');
 
 // Create/Update KYC
-router.post('/', createOrUpdateKYC);
+router.post('/:userId', createOrUpdateKYC);
 
-// Update KYC status by email
-router.put('/email/:email/status', updateKYCStatusByEmail);
+// Update KYC status by userId
+router.put('/:userId/status', updateKYCStatus);
 
-// Get KYC by email
-router.get('/email/:email', getKYCByEmail);
+// Get KYC by userId
+router.get('/:userId', getKYCByUser);
 
-// Get KYC status by email
-router.get('/email/:email/status', getKYCStatusByEmail);
+// Get KYC status by userId
+router.get('/:userId/status', getKYCStatus);
 
 // Get all KYCs
 router.get('/', getAllKYCs);
 
-// Get KYC statistics
-router.get('/stats', getKYCStats);
-
-// Delete KYC by email
-router.delete('/email/:email', deleteKYCByEmail);
+// Delete KYC by userId
+router.delete('/:userId', deleteKYC);
 
 module.exports = router;

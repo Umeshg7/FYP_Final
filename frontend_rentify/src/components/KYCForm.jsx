@@ -43,41 +43,40 @@ const KYCForm = () => {
 
   // Check existing KYC status on load
   useEffect(() => {
-    if (user?.email) {
-      checkKYCStatus(user.email);
+    if (user?.uid) {
+      checkKYCStatus(user.uid);
       setFormData(prev => ({
         ...prev,
         firstName: user.displayName?.split(" ")[0] || "",
         lastName: user.displayName?.split(" ")[1] || "",
-        email: user.email || ""
+        email: user.email || "",
+        userId: user.uid 
       }));
     }
   }, [user]);
 
-  const checkKYCStatus = async (email) => {
+  const checkKYCStatus = async (userId) => {
     try {
-      const response = await axiosPublic.get(`/kyc/email/${email}/status`);
+      const response = await axiosPublic.get(`/kyc/${userId}/status`);
       setKycStatus(response.data.data.status);
       setAdminFeedback(response.data.data.adminFeedback || "");
   
       if (response.data.data.status === "NEEDS_CORRECTION") {
-        const kycDetails = await axiosPublic.get(`/kyc/email/${email}`);
+        const kycDetails = await axiosPublic.get(`/kyc/${userId}`);
         setFormData(prev => ({
           ...prev,
           ...kycDetails.data.data,
-          documents: [] // Clear documents to force re-upload
+          documents: [] 
         }));
-        setShowForm(false); // Hide form initially for correction cases
-      } else if (response.data.data.status === "APPROVED" || response.data.data.status === "REJECTED") {
-        setShowForm(false); // Hide form for finalized statuses
-      } else if (response.data.data.status === "PENDING") {
-        setShowForm(false); // Hide form for pending status
+        setShowForm(false);
+      } else if (["APPROVED", "REJECTED", "PENDING"].includes(response.data.data.status)) {
+        setShowForm(false);
       } else {
-        setShowForm(true); // Show form for other cases (no KYC exists)
+        setShowForm(true);
       }
     } catch (error) {
       console.log("No existing KYC found - showing form");
-      setShowForm(true); // Show form if no KYC exists
+      setShowForm(true);
     }
   };
 
@@ -139,14 +138,13 @@ const KYCForm = () => {
     setError("");
   
     try {
-      // Validation checks (your existing code)
       if (formData.documents.length === 0) {
         setError("Please upload at least one document.");
         setLoading(false);
         return;
       }
   
-      // Upload documents (your existing code)
+      // Upload documents (unchanged)
       const uploadedImages = await Promise.all(
         formData.documents.map(async (file) => {
           const formDataToSend = new FormData();
@@ -160,15 +158,22 @@ const KYCForm = () => {
         })
       );
   
-      // Prepare submission data
+      // Prepare submission data matching backend schema
       const submissionData = {
-        ...formData,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        documentNumber: formData.documentNumber,
+        dateOfBirth: formData.dateOfBirth,
+        permanentAddress: formData.permanentAddress,
+        temporaryAddress: formData.temporaryAddress,
         documentUrls: uploadedImages,
-        status: "PENDING" // Reset status when resubmitting
-      };
-  
-      // Submit to backend
-      const response = await axiosPublic.post("/kyc", submissionData);
+        status: "PENDING",
+        userId: user.uid
+      };  
+      // POST to /kyc endpoint
+      const response = await axiosPublic.post(`/kyc/${user.uid}`, submissionData);
       
       if (response.status === 200 || response.status === 201) {
         navigate("/kycstatus", {
@@ -179,13 +184,15 @@ const KYCForm = () => {
           }
         });
       }
+      console.log("send to frontend",submissionData )
+
     } catch (error) {
       setError(error.response?.data?.message || "Submission failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-
+  
   // Render KYC status view if not showing form
   if ((kycStatus === "APPROVED" || kycStatus === "REJECTED" || kycStatus === "PENDING") && !showForm) {
     return (

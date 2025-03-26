@@ -2,11 +2,12 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const userSchema = new Schema({
+  _id: String, // This will store the Firebase UID
   name: String,
   email: {
     type: String,
     required: true,
-    unique: true, // Creates unique index automatically
+    unique: true,
     trim: true,
     lowercase: true
   },
@@ -24,12 +25,15 @@ const userSchema = new Schema({
   kycVerified: {
     type: Boolean,
     default: false,
-    index: true // Helps query verified users faster
+    index: true
   },
   phoneVerified: {
     type: Boolean,
     default: false
   }
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  _id: false // This tells Mongoose not to auto-generate an _id
+});
 
 module.exports = mongoose.model('User', userSchema);

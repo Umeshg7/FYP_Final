@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FaGoogle } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc"; // More colorful Google icon
 import { IoClose } from "react-icons/io5";
 import { useForm } from "react-hook-form";
 import useAuth from "../hooks/useAuth";
@@ -9,6 +9,7 @@ import logo from "/logo.png";
 
 const Login = () => {
   const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const { signUpWithGmail, login } = useAuth();
   const axiosPublic = useAxiosPublic();
   const navigate = useNavigate();
@@ -22,74 +23,76 @@ const Login = () => {
     formState: { errors },
   } = useForm();
 
-  const onSubmit = (data) => {
-    login(data.email, data.password)
-      .then((result) => {
-        // Prepare user data for MongoDB
-        const userInfo = {
-          name: result.user.displayName || data.name, // Use displayName from Firebase or name from form
-          email: data.email,
-          photoURL: result.user.photoURL || "", // Use photoURL from Firebase if available
-          role: "user", // Default role
-        };
-
-        console.log("Sending user data to backend:", userInfo); // Log the payload
-
-        // Send user data to backend
-        axiosPublic
-          .post("/users", userInfo)
-          .then(() => {
-            alert("Login successful!");
-            navigate(from, { replace: true });
-          })
-          .catch((error) => {
-            console.error("Error posting user data:", error); // Log the error
-            if (error.response?.status === 302) {
-              alert("User already exists!");
-            } else {
-              setErrorMessage("Failed to save user data. Please try again.");
-            }
+  const onSubmit = async (data) => {
+    setLoading(true);
+    setErrorMessage("");
+  
+    try {
+      const result = await login(data.email, data.password);
+      const user = result.user;
+      
+      // Check if user already exists in your DB
+      try {
+        await axiosPublic.get(`/users/${user.uid}`);
+      } catch (error) {
+        if (error.response?.status === 404) {
+          // User doesn't exist, create them
+          await axiosPublic.post("/users", {
+            _id: user.uid,
+            name: user.displayName || data.email.split('@')[0],
+            email: user.email,
+            photoURL: user.photoURL || "",
+            role: "user",
+            createdAt: new Date()
           });
-      })
-      .catch(() => {
-        setErrorMessage("Please provide a valid email & password!");
-      });
-    reset();
+        }
+      }
+      
+      navigate(from, { replace: true });
+    } catch (error) {
+      let message = "Login failed";
+      if (error.code === "auth/invalid-credential") {
+        message = "Invalid email or password";
+      } else if (error.code === "auth/too-many-requests") {
+        message = "Account temporarily locked due to many failed attempts";
+      }
+      setErrorMessage(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    signUpWithGmail()
-      .then((result) => {
-        // Prepare user data for MongoDB
-        const userInfo = {
-          name: result.user.displayName || "Unknown", // Use displayName from Firebase
-          email: result.user.email,
-          photoURL: result.user.photoURL || "", // Use photoURL from Firebase if available
-          role: "user", // Default role
-        };
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setErrorMessage("");
+    
+    try {
+      const result = await signUpWithGmail();
+      const user = result.user;
+      
+      const userInfo = {
+        _id: user.uid, // Firebase UID as MongoDB _id
+        name: user.displayName || "Google User",
+        email: user.email,
+        photoURL: user.photoURL || "",
+        role: "user",
+        createdAt: new Date()
+      };
 
-        console.log("Sending user data to backend:", userInfo); // Log the payload
-
-        // Send user data to backend
-        axiosPublic
-          .post("/users", userInfo)
-          .then(() => {
-            alert("Login successful!");
-            navigate("/");
-          })
-          .catch((error) => {
-            console.error("Error posting user data:", error); // Log the error
-            if (error.response?.status === 302) {
-              alert("User already exists!");
-            } else {
-              setErrorMessage("Failed to save user data. Please try again.");
-            }
-          });
-      })
-      .catch((error) => {
-        console.error("Google login error:", error);
-        setErrorMessage("Failed to login with Google. Please try again.");
-      });
+      const response = await axiosPublic.post("/users", userInfo);
+      console.log("Google user created:", response.data);
+      navigate(from, { replace: true });
+      
+    } catch (error) {
+      console.error("Google login error:", error);
+      setErrorMessage(
+        error.code === "auth/popup-closed-by-user" 
+          ? "Google sign-in was canceled" 
+          : "Failed to sign in with Google"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -159,7 +162,7 @@ const Login = () => {
             className="btn bg-white border-gray-300 hover:bg-gray-100 flex items-center justify-center gap-2 w-full"
             onClick={handleGoogleLogin}
           >
-            <FaGoogle className="text-xl" /> Sign Up With Google
+            <FcGoogle className="text-xl" /> Sign Up With Google
           </button>
         </div>
       </div>

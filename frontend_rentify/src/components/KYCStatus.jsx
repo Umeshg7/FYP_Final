@@ -14,7 +14,7 @@ const KYCStatus = () => {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await axiosPublic.get(`/kyc/email/${user.email}/status`);
+        const response = await axiosPublic.get(`/kyc/${user.uid}/status`);
         setStatus(response.data.data.status);
         setFeedback(response.data.data.adminFeedback || 'No feedback yet');
       } catch (error) {

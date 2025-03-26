@@ -1,90 +1,278 @@
 const User = require("../models/User");
 
-// Get all users (now includes age)
+/**
+ * @desc    Get all users (Admin only)
+ * @route   GET /api/users
+ * @access  Private/Admin
+ */
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({});
-    res.status(200).json(users);
+    const users = await User.find({})
+      .select('-__v -createdAt -updatedAt -password');
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
   }
 };
 
-// Create a new user (with age)
+/**
+ * @desc    Create new user (with Firebase UID)
+ * @route   POST /api/users
+ * @access  Public
+ */
 const createUser = async (req, res) => {
-  const user = req.body;
-  console.log('Received user data:', user);
-
-  const query = { email: user.email };
   try {
-    const existingUser = await User.findOne(query);
+    const { _id, email } = req.body;
+
+    // Check for existing user
+    const existingUser = await User.findOne({ 
+      $or: [{ _id }, { email }] 
+    });
+
     if (existingUser) {
-      return res.status(302).json({ message: "User already exists!" });
+      return res.status(200).json({
+        success: true,
+        message: "User already exists",
+        data: existingUser
+      });
     }
 
-    const result = await User.create(user);
-    res.status(200).json(result);
+    // Create new user
+    const newUser = await User.create({
+      _id,
+      ...req.body
+    });
+
+    res.status(201).json({
+      success: true,
+      data: newUser
+    });
   } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "User creation failed",
+      error: error.message
+    });
   }
 };
 
-// Delete a user (unchanged)
-const deleteUser = async (req, res) => {
-  const userId = req.params.id;
+/**
+ * @desc    Get user profile
+ * @route   GET /api/users/:id
+ * @access  Private
+ */
+const getUserProfile = async (req, res) => {
   try {
-    const deletedUser = await User.findByIdAndDelete(userId);
-    if (!deletedUser) {
-      return res.status(404).json({ message: "User not found!" });
+    const user = await User.findById(req.params.id)
+      .select('-__v -createdAt -updatedAt');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
     }
-    res.status(200).json({ message: "User deleted successfully!" });
+
+    // Authorization check
+    if (req.user._id !== user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to access this profile"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
   }
 };
 
-// Check admin status (unchanged)
-const getAdmin = async (req, res) => {
-  const email = req.params.email;
-  const query = { email: email };
+/**
+ * @desc    Update user profile
+ * @route   PATCH /api/users/:id
+ * @access  Private
+ */
+const updateUser = async (req, res) => {
   try {
-    const user = await User.findOne(query);
-    if (email !== req.decoded.email) {
-      return res.status(403).send({ message: "Forbidden access" });
+    const { id } = req.params;
+    const updates = req.body;
+    
+    // Authorization check
+    if (req.user._id !== id && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to update this profile"
+      });
     }
-    let admin = false;
-    if (user) {
-      admin = user?.role === "admin";
-    }
-    res.status(200).json({ admin });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
 
-// Make admin (unchanged)
-const makeAdmin = async (req, res) => {
-  const userId = req.params.id;
-  try {
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { role: "admin" },
-      { new: true, runValidators: true }
+    // Field validation
+    const allowedUpdates = ['name', 'photoURL', 'phone', 'address', 'age'];
+    const invalidUpdates = Object.keys(updates).filter(
+      update => !allowedUpdates.includes(update)
     );
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
+
+    if (invalidUpdates.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid updates attempted",
+        invalidFields: invalidUpdates,
+        allowedFields: allowedUpdates
+      });
     }
-    res.status(200).json(updatedUser);
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { ...updates, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).select('-__v -createdAt');
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: updatedUser
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Profile update failed",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Delete user (Admin only)
+ * @route   DELETE /api/users/:id
+ * @access  Private/Admin
+ */
+const deleteUser = async (req, res) => {
+  try {
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
+
+    if (!deletedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+      data: {}
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "User deletion failed",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Check admin status by user ID
+ * @route   GET /api/users/:id/admin
+ * @access  Private
+ */
+// In your userControllers.js
+const getAdminStatus = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      isAdmin: user.role === 'admin'
+    });
+  } catch (error) {
+    console.error("Admin check error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Make user admin (Admin only)
+ * @route   PATCH /api/users/:id/admin
+ * @access  Private/Admin
+ */
+// userControllers.js
+const makeAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verify user exists
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update role to admin
+    user.role = 'admin';
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `${user.name} is now an admin`,
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Make admin error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user role',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
 module.exports = {
   getAllUsers,
   createUser,
+  getUserProfile,
+  updateUser,
   deleteUser,
-  getAdmin,
-  makeAdmin,
+  getAdminStatus,
+  makeAdmin
 };

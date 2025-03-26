@@ -9,18 +9,36 @@ const addressSchema = new Schema({
 }, { _id: false });
 
 const KYCSchema = new Schema({
-  firstName: String,
-  lastName: String,
-  email: { type: String, unique: true },
-  phoneNumber: String,
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  email: { 
+    type: String, 
+    required: true,
+    match: [/.+\@.+\..+/, 'Please enter a valid email'],
+    lowercase: true
+  },
+  phoneNumber: { type: String, required: true },
+  photoUrls: {
+    type: [String],
+    required: true
+  },
+  userId: { 
+    type: String,  // Changed from ObjectId to String
+    required: true, 
+    unique: true 
+  },
   documentNumber: {
     type: String,
-    default: "Not Given"
+    required: true
   },
-  dateOfBirth: Date,
-  permanentAddress: addressSchema,
+  dateOfBirth: { type: Date, required: true },
+  permanentAddress: { type: addressSchema, required: true },
   temporaryAddress: addressSchema,
-  documentUrls: [String],
+  documentUrls: {
+    type: [String],
+    validate: [arrayLimit, 'Must have at least 1 document'],
+    required: true
+  },
   status: {
     type: String,
     enum: ['PENDING', 'APPROVED', 'REJECTED', 'NEEDS_CORRECTION'],
@@ -28,6 +46,15 @@ const KYCSchema = new Schema({
   },
   adminFeedback: String,
   lastReviewedAt: Date
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true } 
+});
+
+// Validate documentUrls array has at least 1 item
+function arrayLimit(val) {
+  return val.length >= 1;
+}
 
 module.exports = mongoose.model('KYC', KYCSchema);

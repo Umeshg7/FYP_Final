@@ -1,6 +1,6 @@
 import React, { useState, useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { FaGoogle } from "react-icons/fa";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc"; // More colorful Google icon
 import { IoClose } from "react-icons/io5";
 import { useForm } from "react-hook-form";
 import { AuthContext } from "../Contexts/AuthProvider";
@@ -9,9 +9,12 @@ import logo from "/logo.png";
 
 const Signup = () => {
   const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const { signUpWithGmail, createUser, updateUserProfile } = useContext(AuthContext);
   const axiosPublic = useAxiosPublic();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/";
 
   const {
     register,
@@ -19,87 +22,106 @@ const Signup = () => {
     formState: { errors },
   } = useForm();
 
-  const onSubmit = (data) => {
-    createUser(data.email, data.password)
-      .then((result) => {
-        // Update user profile with name and photoURL (if available)
-        updateUserProfile(data.name, "")
-          .then(() => {
-            // Prepare user data for MongoDB
-            const userInfo = {
-              name: data.name,
-              email: data.email,
-              photoURL: result.user.photoURL || "", // Use photoURL from Firebase if available
-              role: "user", // Default role
-            };
+  const onSubmit = async (data) => {
+    setLoading(true);
+    setErrorMessage("");
 
-            console.log("Sending user data to backend:", userInfo); // Log the payload
+    try {
+      const result = await createUser(data.email, data.password);
+      const user = result.user;
 
-            // Send user data to backend
-            axiosPublic
-              .post("/users", userInfo)
-              .then(() => {
-                alert("Signup successful!");
-                navigate("/");
-              })
-              .catch((error) => {
-                console.error("Error posting user data:", error); // Log the error
-                if (error.response?.status === 302) {
-                  alert("User already exists!");
-                } else {
-                  setErrorMessage("Failed to save user data. Please try again.");
-                }
-              });
-          });
-      })
-      .catch(() => setErrorMessage("Signup failed. Please try again."));
+      // Update user profile with name
+      await updateUserProfile(data.name, "");
+
+      // Prepare user data for MongoDB
+      const userInfo = {
+        _id: user.uid,
+        name: data.name,
+        email: data.email,
+        photoURL: user.photoURL || "",
+        role: "user",
+        createdAt: new Date()
+      };
+
+      // Check if user exists before creating
+      try {
+        await axiosPublic.get(`/users/${user.uid}`);
+      } catch (error) {
+        if (error.response?.status === 404) {
+          await axiosPublic.post("/users", userInfo);
+        }
+      }
+
+      navigate(from, { replace: true });
+    } catch (error) {
+      console.error("Signup error:", error);
+      let message = "Signup failed";
+      if (error.code === "auth/email-already-in-use") {
+        message = "Email already in use";
+      } else if (error.code === "auth/weak-password") {
+        message = "Password should be at least 6 characters";
+      }
+      setErrorMessage(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGoogleRegister = () => {
-    signUpWithGmail()
-      .then((result) => {
-        // Prepare user data for MongoDB
-        const userInfo = {
-          name: result.user.displayName || "Unknown", // Use displayName from Firebase
-          email: result.user.email,
-          photoURL: result.user.photoURL || "", // Use photoURL from Firebase if available
-          role: "user", // Default role
-        };
+  const handleGoogleRegister = async () => {
+    setLoading(true);
+    setErrorMessage("");
 
-        console.log("Sending user data to backend:", userInfo); // Log the payload
+    try {
+      const result = await signUpWithGmail();
+      const user = result.user;
 
-        // Send user data to backend
-        axiosPublic
-          .post("/users", userInfo)
-          .then(() => {
-            alert("Signup successful!");
-            navigate("/");
-          })
-          .catch((error) => {
-            console.error("Error posting user data:", error); // Log the error
-            if (error.response?.status === 302) {
-              alert("User already exists!");
-            } else {
-              setErrorMessage("Failed to save user data. Please try again.");
-            }
-          });
-      })
-      .catch(() => setErrorMessage("Google signup failed. Try again."));
+      const userInfo = {
+        _id: user.uid,
+        name: user.displayName || "Google User",
+        email: user.email,
+        photoURL: user.photoURL || "",
+        role: "user",
+        createdAt: new Date()
+      };
+
+      // Check if user exists before creating
+      try {
+        await axiosPublic.get(`/users/${user.uid}`);
+      } catch (error) {
+        if (error.response?.status === 404) {
+          await axiosPublic.post("/users", userInfo);
+        }
+      }
+
+      navigate(from, { replace: true });
+    } catch (error) {
+      console.error("Google signup error:", error);
+      setErrorMessage(
+        error.code === "auth/popup-closed-by-user" 
+          ? "Google sign-up was canceled" 
+          : "Failed to sign up with Google"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <div className="modal-box max-w-md relative p-6 shadow-lg rounded-lg bg-white">
         <button
           onClick={() => navigate("/")}
           className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+          disabled={loading}
         >
           <IoClose size={24} />
         </button>
+        
         <div className="text-center mb-4">
           <img src={logo} alt="RentifyHub" className="h-12 mx-auto" />
           <h3 className="text-xl font-bold mt-2">Create an Account</h3>
         </div>
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="form-control">
             <label className="label-text">Name</label>
@@ -107,7 +129,14 @@ const Signup = () => {
               type="text"
               placeholder="Your Name"
               className="input input-bordered w-full"
-              {...register("name", { required: "Name is required" })}
+              {...register("name", { 
+                required: "Name is required",
+                minLength: {
+                  value: 3,
+                  message: "Name should be at least 3 characters"
+                }
+              })}
+              disabled={loading}
             />
             {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
           </div>
@@ -118,7 +147,14 @@ const Signup = () => {
               type="email"
               placeholder="your-email@example.com"
               className="input input-bordered w-full"
-              {...register("email", { required: "Email is required" })}
+              {...register("email", { 
+                required: "Email is required",
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: "Invalid email address"
+                }
+              })}
+              disabled={loading}
             />
             {errors.email && <p className="text-red-500 text-xs">{errors.email.message}</p>}
           </div>
@@ -129,15 +165,30 @@ const Signup = () => {
               type="password"
               placeholder="••••••••"
               className="input input-bordered w-full"
-              {...register("password", { required: "Password is required" })}
+              {...register("password", { 
+                required: "Password is required",
+                minLength: {
+                  value: 6,
+                  message: "Password must be at least 6 characters"
+                }
+              })}
+              disabled={loading}
             />
             {errors.password && <p className="text-red-500 text-xs">{errors.password.message}</p>}
           </div>
 
-          {errorMessage && <p className="text-red-500 text-xs text-center">{errorMessage}</p>}
+          {errorMessage && (
+            <p className="text-red-500 text-xs text-center">{errorMessage}</p>
+          )}
 
-          <div className="form-control mt-4">
-            <button type="submit" className="btn bg-purple-yellow-gradient text-white w-full">Sign Up</button>
+          <div className="form-control mt-6">
+            <button 
+              type="submit" 
+              className="btn bg-purple-yellow-gradient text-white w-full"
+              disabled={loading}
+            >
+              {loading ? 'Creating account...' : 'Sign Up'}
+            </button>
           </div>
         </form>
 
@@ -146,13 +197,17 @@ const Signup = () => {
           <Link to="/login" className="underline text-purple ml-2">Login here</Link>
         </p>
 
+        <div className="divider">OR</div>
+
         <div className="form-control mt-4 text-center">
           <button
             type="button"
             className="btn bg-white border-gray-300 hover:bg-gray-100 flex items-center justify-center gap-2 w-full"
             onClick={handleGoogleRegister}
+            disabled={loading}
           >
-            <FaGoogle className="text-xl" /> Sign Up With Google
+            <FcGoogle className="text-xl" /> 
+            {loading ? 'Signing up...' : 'Sign Up With Google'}
           </button>
         </div>
       </div>

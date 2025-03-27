@@ -23,6 +23,7 @@ router.get('/:id/admin', verifyToken, getAdminStatus);  // Changed from /admin/:
 
 // User profile routes
 router.get('/:id', verifyToken, getUserProfile);  // Changed from :uid to :id
+
 router.patch('/:id', verifyToken, updateUser);    // Changed from :uid to :id
 
 module.exports = router;

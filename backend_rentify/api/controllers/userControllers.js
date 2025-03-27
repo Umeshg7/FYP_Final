@@ -71,8 +71,7 @@ const createUser = async (req, res) => {
  */
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id)
-      .select('-__v -createdAt -updatedAt');
+    const user = await User.findById(req.params.id).select('-__v -createdAt -updatedAt');
 
     if (!user) {
       return res.status(404).json({
@@ -81,14 +80,8 @@ const getUserProfile = async (req, res) => {
       });
     }
 
-    // Authorization check
-    if (req.user._id !== user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to access this profile"
-      });
-    }
-
+    // Remove or modify authorization check
+    // If you still want role-based access, fetch the current user using req.params.id
     res.status(200).json({
       success: true,
       data: user

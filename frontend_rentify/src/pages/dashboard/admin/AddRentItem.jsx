@@ -11,19 +11,17 @@ const AddRentItem = () => {
   const { user } = useAuth();
   const [error, setError] = useState("");
   const [selectedCity, setSelectedCity] = useState(null);
-  const [images, setImages] = useState([]); // State to store selected images
-  const [uploading, setUploading] = useState(false); // State to handle uploading state
+  const [images, setImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
-  // Handle image selection
   const handleImageChange = (e) => {
     const files = e.target.files;
     if (files.length > 0) {
       const imageArray = Array.from(files);
-      setImages((prevImages) => [...prevImages, ...imageArray]); // Append new images to the existing ones
+      setImages((prevImages) => [...prevImages, ...imageArray]);
     }
   };
 
-  // Upload images to ImgBB
   const uploadImagesToImgBB = async (images) => {
     const uploadedImageUrls = [];
     const apiKey = "db33f182a086535a7febb31315a3b84d"; // Replace with your ImgBB API key
@@ -42,7 +40,7 @@ const AddRentItem = () => {
         );
         const data = await response.json();
         if (data.data && data.data.url) {
-          uploadedImageUrls.push(data.data.url); // Store the hosted image URL
+          uploadedImageUrls.push(data.data.url);
         } else {
           throw new Error("Failed to upload image to ImgBB");
         }
@@ -56,8 +54,8 @@ const AddRentItem = () => {
   };
 
   const onSubmit = async (data) => {
-    if (!user || !user.email) {
-      setError("User is not logged in.");
+    if (!user || !user.email || !user.uid) {
+      setError("User is not properly authenticated.");
       return;
     }
 
@@ -66,35 +64,35 @@ const AddRentItem = () => {
       return;
     }
 
-    setUploading(true); // Set uploading state to true
+    setUploading(true);
     setError("");
 
     try {
-      // Upload images to ImgBB
       const hostedImageUrls = await uploadImagesToImgBB(images);
 
-      // Prepare rent item data
+      // Prepare rent item data with UID
       const rentItemData = {
         title: data.title,
         description: data.description,
         category: data.category,
         pricePerDay: data.pricePerDay,
-        location: selectedCity ? selectedCity.value : "", // Use selected city
+        location: selectedCity ? selectedCity.value : "",
         userEmail: user.email,
-        images: hostedImageUrls, // Use hosted image URLs
+        userId: user.uid, // Add the user's UID
+        userName: user.displayName || "Anonymous", // Add user's display name
+        images: hostedImageUrls,
       };
 
-      // Send data to the backend
       const response = await axiosPublic.post("/rent", rentItemData);
       console.log("Item added successfully:", response.data);
       reset();
-      setSelectedCity(null); // Reset city selection
-      setImages([]); // Clear selected images
+      setSelectedCity(null);
+      setImages([]);
     } catch (error) {
       console.error("Error adding item:", error);
-      setError("Failed to add item.");
+      setError("Failed to add item. Please try again.");
     } finally {
-      setUploading(false); // Reset uploading state
+      setUploading(false);
     }
   };
 

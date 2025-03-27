@@ -16,6 +16,9 @@ import ItemDetails from "../components/ItemDetails";
 import KYCForm from "../components/KYCForm";
 import AdminPanel from "../pages/dashboard/admin/AdminPanel";
 import KYCStatus from "../components/KYCStatus";
+import UserDashboardLayout from "../layout/UserDashboardLayout";
+import Manageuseritems from "../pages/dashboard/user/Manageuseritems";
+import BookingPage from "../components/BookingPage";
 
 const router = createBrowserRouter([
   {
@@ -40,6 +43,10 @@ const router = createBrowserRouter([
       },
     ],
   },
+  {
+    path: "/book/:id",
+    element: <BookingPage/>,
+  },
 
   {
     path: "/login",
@@ -58,7 +65,7 @@ const router = createBrowserRouter([
     element : <KYCStatus/>
   },
   {
-    path: "dashboard",
+    path: "admin-dashboard",
     element: <DashboardLayout />,
     children: [
       {
@@ -85,6 +92,24 @@ const router = createBrowserRouter([
       {
         path: "verifykycadmin",
         element: <AdminPanel/>,
+      },
+    ],
+  },
+  {
+    path: "user-dashboard",
+    element: <UserDashboardLayout/>,
+    children: [
+      {
+        path: "",
+        element: <Dashboard />,
+      },
+      {
+        path: "addrent",
+        element: <AddRentItem />,
+      },
+      {
+        path: "manageitems",
+        element: <Manageuseritems/>,
       },
     ],
   },

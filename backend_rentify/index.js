@@ -55,11 +55,15 @@ app.post("/jwt", async (req, res) => {
 const rentRoutes = require("./api/routes/RentRoutes");
 const userRoutes = require("./api/routes/userRoutes");
 const kycRoutes = require("./api/routes/KYCRoutes");
+// Import Routes
+const bookingRoutes = require("./api/routes/bookingRoutes"); // Add this line
+
 
 // 🛠️ Use Routes
 app.use("/rent", rentRoutes);
 app.use("/users", userRoutes);
 app.use("/kyc", kycRoutes);
+app.use("/bookings", bookingRoutes); // Add this line
 
 // 🛠️ Root Route
 app.get("/", (req, res) => res.send("🚀 RentifyHub Backend is Running!"));

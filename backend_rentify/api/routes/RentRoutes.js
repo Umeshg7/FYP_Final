@@ -11,6 +11,8 @@ router.get("/admin", rentController.getAllItemsForAdmin);
 // Get a single rent item by ID (Fix)
 router.get("/item/:id", rentController.getRentItemById);
 
+// Get rent items by user ID
+router.get("/user/:userId", rentController.getRentItemsByUserId);
 // Post a new rent item (Users can submit)
 router.post("/", rentController.postRentItem);
 

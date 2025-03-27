@@ -116,6 +116,24 @@ const rejectRentItem = async (req, res) => {
   }
 };
 
+// rentController.js
+const getRentItemsByUserId = async (req, res) => {
+  try {
+    const userId = req.params.userId; // This is the Firebase UID
+    
+    // Find all rent items that belong to this user
+    const rentItems = await Rent.find({ userId: userId });
+    
+    if (!rentItems || rentItems.length === 0) {
+      return res.status(404).json({ message: "No items found for this user" });
+    }
+
+    res.status(200).json(rentItems);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Approve an item (Admin only)
 const approveRentItem = async (req, res) => {
   try {
@@ -147,6 +165,7 @@ module.exports = {
   getAllItemsForAdmin,
   postRentItem,
   approveRentItem,
+  getRentItemsByUserId,
   rejectRentItem,
   deleteRentItem,
   getRentItemById

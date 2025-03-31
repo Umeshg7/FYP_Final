@@ -1,90 +1,84 @@
 const Booking = require("../models/Booking");
 const Rent = require("../models/Rent");
+const User = require("../models/User")
+const { checkDateAvailability } = require('../../utils/bookingUtils');
 
-// Helper function to check date availability
-const checkDateAvailability = async (itemId, startDate, endDate, excludeBookingId = null) => {
-    const query = {
-        itemId,
-        $or: [
-            {
-                startDate: { $lt: new Date(endDate) },
-                endDate: { $gt: new Date(startDate) }
-            }
-        ],
-        status: { $in: ["confirmed", "pending"] }
-    };
 
-    if (excludeBookingId) {
-        query._id = { $ne: excludeBookingId };
-    }
-
-    const conflictingBookings = await Booking.find(query);
-    return conflictingBookings.length === 0;
-};
+    
 
 // Create a new booking
+
 exports.createBooking = async (req, res) => {
-    try {
-        const { lenderId, renterId, itemId, startDate, endDate, paymentMethod } = req.body;
+  try {
+    const { lender, renter, item, startDate, endDate, paymentMethod } = req.body;
 
-        // Validate input
-        if (!lenderId || !renterId || !itemId || !startDate || !endDate) {
-            return res.status(400).json({ 
-                success: false,
-                message: "Missing required fields" 
-            });
-        }
-
-        // Check if the item exists
-        const item = await Rent.findById(itemId);
-        if (!item) {
-            return res.status(404).json({ 
-                success: false,
-                message: "Item not found" 
-            });
-        }
-
-        // Check availability
-        const isAvailable = await checkDateAvailability(itemId, startDate, endDate);
-        if (!isAvailable) {
-            return res.status(409).json({ 
-                success: false,
-                message: "The selected dates are not available" 
-            });
-        }
-
-        // Calculate total price based on days
-        const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
-        const totalPrice = item.pricePerDay * days;
-
-        // Create the booking
-        const booking = new Booking({
-            lenderId,
-            renterId,
-            itemId,
-            startDate,
-            endDate,
-            totalPrice,
-            paymentMethod,
-            status: paymentMethod ? "pending" : "confirmed"
-        });
-
-        await booking.save();
-
-        res.status(201).json({
-            success: true,
-            message: "Booking created successfully",
-            booking
-        });
-
-    } catch (error) {
-        console.error("Error creating booking:", error);
-        res.status(500).json({ 
-            success: false,
-            message: "Internal server error",
-            error: error.message 
-        });
+    // 1. Validate date range (end date must be after start date)
+    if (new Date(endDate) <= new Date(startDate)) {
+      return res.status(400).json({
+        success: false,
+        message: "End date must be after start date"
+      });
     }
+
+    // 2. Check for existing bookings for the same user on the same dates
+    const existingUserBooking = await Booking.findOne({
+      renter,
+      item,
+      startDate: { $lt: new Date(endDate) },
+      endDate: { $gt: new Date(startDate) },
+      status: { $nin: ["cancelled", "rejected"] }
+    });
+
+    if (existingUserBooking) {
+      return res.status(409).json({
+        success: false,
+        message: "You already have a booking for these dates"
+      });
+    }
+
+    // 3. Check general availability
+    const isAvailable = await checkDateAvailability(item, startDate, endDate);
+    if (!isAvailable) {
+      return res.status(409).json({
+        success: false,
+        message: "The selected dates are not available"
+      });
+    }
+
+    // 4. Calculate price
+    const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+    const itemDetails = await Rent.findById(item);
+    const totalPrice = itemDetails.pricePerDay * days;
+
+    // 5. Create booking
+    const booking = new Booking({
+      lender,
+      renter,
+      item,
+      startDate,
+      endDate,
+      totalPrice,
+      paymentMethod,
+      status: "pending"
+    });
+
+    await booking.save();
+
+    // 6. Return success response
+    res.status(201).json({
+      success: true,
+      message: "Booking created successfully",
+      booking
+    });
+
+  } catch (error) {
+    console.error("Error creating booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
 };
 
 // Check date availability
@@ -121,27 +115,36 @@ exports.checkAvailability = async (req, res) => {
 };
 
 // Get all bookings
+// controllers/bookingController.js
 exports.getAllBookings = async (req, res) => {
     try {
-        const bookings = await Booking.find()
-            .populate("lenderId", "name email")
-            .populate("renterId", "name email")
-            .populate("itemId", "title pricePerDay");
-
-        res.json({
-            success: true,
-            count: bookings.length,
-            bookings
-        });
+      const bookings = await Booking.find()
+        .populate({
+          path: 'lender',
+          model: 'User',
+          select: 'name email photoURL kycVerified'
+        })
+        .populate({
+          path: 'renter',
+          model: 'User',
+          select: 'name email photoURL kycVerified'
+        })
+        .populate('item', 'title pricePerDay images');
+  
+      res.json({
+        success: true,
+        count: bookings.length,
+        bookings
+      });
     } catch (error) {
-        console.error("Error fetching bookings:", error);
-        res.status(500).json({ 
-            success: false,
-            message: "Internal server error",
-            error: error.message 
-        });
+      console.error("Error fetching bookings:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Error fetching bookings",
+        error: error.message
+      });
     }
-};
+  };
 
 // Get booking by ID
 exports.getBookingById = async (req, res) => {

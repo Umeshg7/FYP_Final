@@ -9,6 +9,12 @@ const Cards = ({ item }) => {
     setIsHeartFilled(!isHeartFilled);
   };
 
+  // Function to truncate description to 100 characters
+  const truncateDescription = (text) => {
+    if (text.length <= 100) return text;
+    return text.substring(0, 100) + '...';
+  };
+
   return (
     <div className="p-4">
       <div className="card bg-base-100 w-96 shadow-xl relative border-2 border-purple rounded-lg">
@@ -34,7 +40,9 @@ const Cards = ({ item }) => {
         {/* Card Body */}
         <div className="card-body p-6">
           <h2 className="card-title text-2xl font-bold mb-2">{item.title}</h2>
-          <p className="text-gray-600 mb-4">{item.description}</p>
+          <p className="text-gray-600 mb-4">
+            {truncateDescription(item.description || '')}
+          </p>
           <div className="card-actions justify-between items-center mt-2">
             <h5 className="font-semibold text-xl">
               <span className="text-sm text-red-500">Rs. </span>

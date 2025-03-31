@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { AuthContext } from '../Contexts/AuthProvider';
 import { Link } from 'react-router-dom';
 import useAdmin from '../hooks/useAdmin';
@@ -6,11 +6,16 @@ import useAdmin from '../hooks/useAdmin';
 const Profile = ({ user }) => {
   const { logOut } = useContext(AuthContext);
   const [isAdmin] = useAdmin();
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleLogout = () => {
     logOut()
       .then(() => alert("Logout done"))
       .catch(() => alert("Error Logging out"));
+  };
+
+  const toggleSettings = () => {
+    setShowSettings(!showSettings);
   };
 
   return (
@@ -35,10 +40,20 @@ const Profile = ({ user }) => {
       <div className="drawer-side">
         <label htmlFor="my-drawer-4" className="drawer-overlay"></label>
         <ul className="menu p-4 w-80 min-h-full bg-base-200 text-base-content">
-          <li><a href='/updateprofile'>Profile</a></li>
-          <li><a href='/kycverify'>Verify KYC</a></li>
-          <li><a>Settings</a></li>
-          <li><a>Post for Rent</a></li>
+          <li><Link to='/'>Profile</Link></li>
+          <li><Link to='/kycverify'>Verify KYC</Link></li>
+          
+          {/* Settings with expandable submenu */}
+          <li>
+            <details open={showSettings} onToggle={toggleSettings}>
+              <summary>Settings</summary>
+              <ul>
+                <li><Link to='/updateprofile'>Update Profile</Link></li>
+                <li><Link to='/userdetails'>Your Details</Link></li>
+              </ul>
+            </details>
+          </li>
+          
           
           {isAdmin ? (
             <li><Link to='/admin-dashboard'>Admin Dashboard</Link></li>

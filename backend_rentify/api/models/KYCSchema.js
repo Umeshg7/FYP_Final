@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-
 const addressSchema = new Schema({
   province: String,
   district: String,

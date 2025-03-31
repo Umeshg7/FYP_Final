@@ -8,6 +8,7 @@ export default {
     extend: {
       colors: {
         purple: "#8D52FE",
+        purplehover: "#966FD6",
         yellow: "#FD9051",
         grey: "#8697C4",
         grey1: "#ADBBDA",
@@ -23,11 +24,11 @@ export default {
       keyframes: {
         scroll: {
           "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(-50%)" }, // Adjust to stop halfway (duplicates ensure seamlessness)
+          "100%": { transform: "translateX(-50%)" },
         },
       },
       animation: {
-        scroll: "scroll 20s linear infinite", // Adjust duration for smoothness
+        scroll: "scroll 20s linear infinite",
       },
     },
   },

@@ -1,19 +1,24 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Cards from './Cards'; // Your cards component
-import ItemDetail from './ItemDetail'; // The component that displays item details
+import { AuthProvider } from './contexts/AuthContext';
+import Cards from './Cards';
+import ItemDetail from './ItemDetail';
+import Layout from './components/Layout'; // New layout component
 
 const App = () => {
   return (
-    <Router>
-      <Routes>
-        {/* Route for the cards listing */}
-        <Route path="/" element={<Cards />} />
-
-        {/* Dynamic route for item details */}
-        <Route path="/item/:id" element={<ItemDetail />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Cards />} />
+              <Route path="/item/:id" element={<ItemDetail />} />
+              {/* Add more routes as needed */}
+            </Routes>
+          </Layout>
+        </Router>
+      
+    </AuthProvider>
   );
 };
 

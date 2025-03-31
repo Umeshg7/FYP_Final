@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import useAxiosSecure from "../hooks/useAxiosSecure";
 import { AuthContext } from "../Contexts/AuthProvider";
-import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaComment } from "react-icons/fa";
 import { MdVerified } from "react-icons/md";
 
 const ItemDetails = () => {
@@ -21,6 +21,7 @@ const ItemDetails = () => {
   const handleNavigateToProducts = () => {
     navigate("/rent");
   };
+
   const handleRentNow = () => {
     if (!user) {
       Swal.fire({
@@ -30,21 +31,33 @@ const ItemDetails = () => {
       });
       return;
     }
-    navigate(`/book/${id}`); // Navigate to new booking page
+    navigate(`/book/${id}`);
   };
 
-  // Fetch product details and owner information
+  const handleChatNow = (e) => {
+    e.stopPropagation();
+    if (!user) {
+      Swal.fire({
+        icon: "warning",
+        title: "Login Required",
+        text: "Please login to start chatting",
+      });
+      return;
+    }
+    // Implement your chat functionality here
+    console.log("Chatting with:", displayOwnerInfo.name);
+    // Example: navigate(`/chat/${product.userId}`);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // Fetch product details
         const productResponse = await axiosSecure.get(`/rent/item/${id}`);
         setProduct(productResponse.data);
 
-        // Fetch owner information if userId exists
         if (productResponse.data?.userId) {
           try {
             const ownerResponse = await axiosSecure.get(`/users/${productResponse.data.userId}`);
@@ -54,7 +67,8 @@ const ItemDetails = () => {
             setOwnerInfo({
               name: productResponse.data.userName || "Owner",
               email: productResponse.data.userEmail || "No email provided",
-              kycVerified: false
+              kycVerified: false,
+              photoURL: ""
             });
           }
         }
@@ -74,7 +88,6 @@ const ItemDetails = () => {
     fetchData();
   }, [id, axiosSecure]);
 
-  // Navigate to previous image
   const handlePrevImage = () => {
     if (!product?.images?.length) return;
     setCurrentImageIndex((prevIndex) => 
@@ -82,7 +95,6 @@ const ItemDetails = () => {
     );
   };
 
-  // Navigate to next image
   const handleNextImage = () => {
     if (!product?.images?.length) return;
     setCurrentImageIndex((prevIndex) => 
@@ -90,26 +102,21 @@ const ItemDetails = () => {
     );
   };
 
-  // Open modal with the selected image
   const handleImageClick = (image) => {
     setSelectedImage(image);
   };
 
-  // Close modal
   const handleCloseModal = () => {
     setSelectedImage(null);
   };
 
-  // Fix image URL if needed
   const getImageUrl = (url) => {
     if (!url) return "https://via.placeholder.com/400";
-    // Fix common URL issues
     if (url.startsWith("http://")) url = url.replace("http://", "https://");
     if (!url.startsWith("http")) url = `https://${url}`;
     return url;
   };
 
-  // Default owner info if not available
   const displayOwnerInfo = ownerInfo || {
     name: product?.userName || "Owner",
     email: product?.userEmail || "No email provided",
@@ -148,22 +155,24 @@ const ItemDetails = () => {
           <div className="flex flex-col lg:flex-row gap-12">
             {/* Image Section */}
             <div className="w-full lg:w-1/2 relative">
-              <div className="relative aspect-w-1 aspect-h-1 overflow-hidden rounded-lg bg-gray-200">
-                <img
-                  src={
-                    product.images?.length > 0
-                      ? getImageUrl(product.images[currentImageIndex])
-                      : "https://via.placeholder.com/400"
-                  }
-                  alt={product.title}
-                  className="w-full h-full object-cover object-center cursor-pointer"
-                  onClick={() => product.images?.length > 0 && handleImageClick(product.images[currentImageIndex])}
-                  onError={(e) => {
-                    e.target.src = "https://via.placeholder.com/400";
-                  }}
-                />
+              <div className="relative bg-grey1 rounded-lg overflow-hidden " 
+                   style={{ height: "500px", width: "100%" }}>
+                <div className="flex items-center justify-center h-full w-full">
+                  <img
+                    src={
+                      product.images?.length > 0
+                        ? getImageUrl(product.images[currentImageIndex])
+                        : "https://via.placeholder.com/400"
+                    }
+                    alt={product.title}
+                    className="max-h-full max-w-full object-contain p-4"
+                    onClick={() => product.images?.length > 0 && handleImageClick(product.images[currentImageIndex])}
+                    onError={(e) => {
+                      e.target.src = "https://via.placeholder.com/400";
+                    }}
+                  />
+                </div>
                 
-                {/* Navigation Arrows */}
                 {product.images?.length > 1 && (
                   <>
                     <button
@@ -184,79 +193,93 @@ const ItemDetails = () => {
                     >
                       <FaArrowRight />
                     </button>
+                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+                      {currentImageIndex + 1} / {product.images.length}
+                    </div>
                   </>
-                )}
-                
-                {/* Image Counter */}
-                {product.images?.length > 1 && (
-                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
-                    {currentImageIndex + 1} / {product.images.length}
-                  </div>
                 )}
               </div>
             </div>
 
             {/* Product Info Section */}
             <div className="flex flex-col justify-center text-center lg:text-left w-full lg:w-1/2">
-              <h2 className="text-3xl font-bold mb-4 flex items-center">
+              <h2 className="text-3xl font-bold mb-4 flex items-center justify-center lg:justify-start">
                 {product.title}
               </h2>
-              <p className="text-lg mb-4">{product.description}</p>
+              <p className="text-lg mb-6 text-gray-700">{product.description}</p>
 
-              <p className="font-bold text-xl text-red-600 mb-3">
-                Price Per Day: NPR {product.pricePerDay}
-              </p>
-
-              <p className="text-gray-600">
-                <strong>Category:</strong> {product.category}
-              </p>
-              <p className="text-gray-600">
-                <strong>Location:</strong> {product.location}
-              </p>
-              <p className="text-gray-600">
-                <strong>Owner Email:</strong> {displayOwnerInfo.email}
-              </p>
-
-              {/* Owner Profile Section */}
-              <div 
-                className="flex items-center mt-4 cursor-pointer" 
-                onClick={() => product.userId && navigate(`/profile/${product.userId}`)}
-              >
-                <img
-                  src={getImageUrl(displayOwnerInfo.photoURL)}
-                  alt={displayOwnerInfo.name}
-                  className="w-12 h-12 rounded-full object-cover mr-4"
-                  onError={(e) => {
-                    e.target.src = "https://via.placeholder.com/100";
-                  }}
-                />
-                <div>
-                  <p className="text-lg font-semibold flex items-center">
-                    {displayOwnerInfo.name}
-                    {displayOwnerInfo.kycVerified && (
-                      <span className="ml-1 text-purple" title="KYC Verified">
-                        <MdVerified size={18} />
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {displayOwnerInfo.kycVerified ? "Verified User" : "Unverified User"}
-                  </p>
-                </div>
-
+              <div className="mb-6">
+                <p className="font-bold text-2xl text-purple-600">
+                  NPR {product.pricePerDay} <span className="text-lg">per day</span>
+                </p>
               </div>
-              <button
-        onClick={handleRentNow}
-        className="mt-6 bg-purple text-white px-3 py-3 rounded-lg hover:bg-purple-700 transition w-full"
-      >
-        Rent Now
-      </button>
-              <button
-                onClick={handleNavigateToProducts}
-                className="mt-6 bg-purple-yellow-gradient text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
-              >
-                Browse More Listings
-              </button>
+
+              <div className="space-y-3 mb-8 text-left">
+                <p className="text-gray-700">
+                  <span className="font-semibold">Category:</span> {product.category}
+                </p>
+                <p className="text-gray-700">
+                  <span className="font-semibold">Location:</span> {product.location}
+                </p>
+                <p className="text-gray-700">
+                  <span className="font-semibold">Owner Email:</span> {displayOwnerInfo.email}
+                </p>
+              </div>
+
+              {/* Owner Profile Section with Chat Button */}
+              <div className="flex items-center justify-between mb-8">
+                <div 
+                  className="flex items-center cursor-pointer"
+                  onClick={() => product.userId && navigate(`/profile/${product.userId}`)}
+                >
+                  <img
+                    src={getImageUrl(displayOwnerInfo.photoURL)}
+                    alt={displayOwnerInfo.name}
+                    className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-purple-100"
+                    onError={(e) => {
+                      e.target.src = "https://via.placeholder.com/100";
+                    }}
+                  />
+                  <div>
+                    <p className="text-lg font-semibold flex items-center">
+                      {displayOwnerInfo.name}
+                      {displayOwnerInfo.kycVerified && (
+                        <MdVerified className="ml-2 text-purple" size={20} />
+                      )}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Chat Now Button */}
+                <button
+                  onClick={handleChatNow}
+                  className="flex items-center gap-2 bg-white text-purple px-4 py-2 rounded-full border-2 border-purple shadow-md hover:shadow-lg transition-all"
+                  style={{
+                    boxShadow: "2px 2px 5px rgba(0,0,0,0.1)",
+                    borderRadius: "2rem 2rem 2rem 0"
+                  }}
+                >
+                  <div className="bg-white text-purple p-1 rounded-full">
+                    <FaComment />
+                  </div>
+                  <span>Chat Now</span>
+                </button>
+              </div>
+
+              <div className="flex flex-col space-y-4">
+                <button
+                  onClick={handleRentNow}
+                  className="bg-purple  text-white px-6 py-3 rounded-lg transition-colors"
+                >
+                  Rent Now
+                </button>
+                <button
+                  onClick={handleNavigateToProducts}
+                  className="border border-purple text-purple  px-6 py-3 rounded-lg transition-colors"
+                >
+                  Browse More Listings
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -265,10 +288,10 @@ const ItemDetails = () => {
       {/* Image Modal */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50"
           onClick={handleCloseModal}
         >
-          <div className="bg-white p-4 rounded-lg max-w-4xl">
+          <div className="bg-white p-6 rounded-lg max-w-4xl w-full mx-4">
             <img
               src={getImageUrl(selectedImage)}
               alt="Selected"
@@ -277,12 +300,14 @@ const ItemDetails = () => {
                 e.target.src = "https://via.placeholder.com/800";
               }}
             />
-            <button
-              onClick={handleCloseModal}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-            >
-              Close
-            </button>
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={handleCloseModal}
+                className="px-6 py-2 bg-purple text-white rounded-lg hover:bg-purple transition"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

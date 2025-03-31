@@ -18,8 +18,9 @@ import AdminPanel from "../pages/dashboard/admin/AdminPanel";
 import KYCStatus from "../components/KYCStatus";
 import UserDashboardLayout from "../layout/UserDashboardLayout";
 import Manageuseritems from "../pages/dashboard/user/Manageuseritems";
-import BookingPage from "../components/BookingPage";
-
+import UserDetails from "../pages/userDashboard/userDetails";
+import PublicProfile from "../pages/userDashboard/PublicProfile";
+import BookItem from "../components/BookItem";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -38,6 +39,10 @@ const router = createBrowserRouter([
         element: <UpdateProfile />,
       },
       {
+        path: "/userdetails",
+        element: <UserDetails/>,
+      },
+      {
         path: "/item/:id", // This is the dynamic route for item details
         element: <ItemDetails />, // Add the component here
       },
@@ -45,7 +50,11 @@ const router = createBrowserRouter([
   },
   {
     path: "/book/:id",
-    element: <BookingPage/>,
+    element: <BookItem/>,
+  },
+  {
+    path: "/profile/:userId",
+    element: <PublicProfile/>,
   },
 
   {

@@ -31,7 +31,7 @@ const sharedLinks = (
     </li>
     <li>
       <Link to="/menu">
-        <FaLocationArrow /> Orders Tracking
+        <FaLocationArrow /> Booking Tracking
       </Link>
     </li>
     <li>
@@ -111,6 +111,11 @@ const DashboardLayout = () => {
               <li>
                 <Link to="/admin-dashboard/manageitems">
                   <FaEdit /> Manage Items
+                </Link>
+              </li>
+              <li>
+                <Link to="/admin-dashboard/adminbooking">
+                  <FaEdit /> Booking Tracking
                 </Link>
               </li>
               <li className="mb-3">

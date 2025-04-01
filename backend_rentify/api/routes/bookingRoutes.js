@@ -20,4 +20,11 @@ router.patch("/:bookingId/status", bookingController.updateBookingStatus);
 // Get user's bookings
 router.get("/user/:userId", bookingController.getUserBookings);
 
+router.delete("/:bookingId", bookingController.deleteBooking);
+
+// Add these new routes
+router.patch("/:bookingId/active", bookingController.markAsActive);
+router.patch("/:bookingId/complete", bookingController.markAsCompleted);
+
+
 module.exports = router;

@@ -29,6 +29,8 @@ const BookItem = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -165,7 +167,7 @@ const BookItem = () => {
                       onClick={() => handleDateClick(day)}
                       className={`
                         text-center py-2 text-sm
-                        ${isDisabled ? 'text-gray-400' : 'text-gray-800 cursor-pointer'}
+                        ${isDisabled ? 'text-gray-300' : 'text-gray-800 cursor-pointer'}
                         ${isBooked(day) ? 'bg-red font-medium' : ''}
                         ${isToday && !isSelected(day) ? 'border border-purple font-bold' : ''}
                         ${isStart || isEnd || isInRange ? 'bg-purple text-white' : ''}
@@ -208,11 +210,20 @@ const BookItem = () => {
       });
       return;
     }
-
+  
+    if (!acceptedTerms) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Terms Not Accepted',
+        text: 'You must accept the rental terms and conditions to proceed',
+      });
+      return;
+    }
+  
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    if (end <= start) {
+    if (end < start) {
       Swal.fire({
         icon: 'error',
         title: 'Invalid Dates',
@@ -220,7 +231,7 @@ const BookItem = () => {
       });
       return;
     }
-
+  
     if (start < new Date()) {
       Swal.fire({
         icon: 'error',
@@ -229,7 +240,7 @@ const BookItem = () => {
       });
       return;
     }
-
+  
     // Check if any dates in range are booked
     const isRangeAvailable = !bookings.some(booking => {
       if (["cancelled", "rejected"].includes(booking.status)) return false;
@@ -250,24 +261,33 @@ const BookItem = () => {
       });
       return;
     }
-
+  
     try {
       setSubmitting(true);
+      const totalDays = differenceInDays(endDate, startDate) + 1;
+      const totalPrice = totalDays * item.pricePerDay;
+      const bookingPayment = Math.round(totalPrice * 0.1);
+  
       const bookingData = {
         lender: item.userId,
         renter: user.uid,
         item: item._id,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        paymentMethod: "card"
+        totalPrice: totalPrice,
+        paymentMethod: "card",
+        acceptedTerms: true,
+        status: "pending"
       };
-
+  
+      console.log("Submitting booking data:", bookingData); // For debugging
+  
       const res = await axiosSecure.post("/bookings", bookingData);
       
       Swal.fire({
         icon: "success",
         title: "Booking Request Sent!",
-        text: "The owner will confirm your booking shortly",
+        text: `A 10% payment of NPR ${bookingPayment} is required to secure your booking`,
         showConfirmButton: false,
         timer: 2000
       });
@@ -292,6 +312,56 @@ const BookItem = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const TermsModal = () => {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+          <h3 className="text-xl font-bold mb-4">Rental Terms & Conditions</h3>
+          
+          <div className="text-sm space-y-3">
+            <p>By booking this item, you agree to:</p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>Collect item between 8:00-10:00 AM on start date</li>
+              <li>Return item before 8:00 AM on day after end date</li>
+              <li>Late returns charged 50% of daily rate per hour</li>
+              <li>You're responsible for any damage or loss</li>
+              <li>Item must be returned in same condition</li>
+              <li>Security deposit may be required</li>
+              <li>Valid ID required at collection</li>
+              <li>No modifications allowed to the item</li>
+              <li>Report any issues immediately</li>
+              <li>Cancellation policy applies if cancelled within 10 minutes of booking</li>
+              <li>10% payment required to secure booking</li>
+              <li>Remaining 90% to be paid when collecting the item</li>
+            </ul>
+          </div>
+
+          <div className="mt-6 flex items-center">
+            <input
+              type="checkbox"
+              id="modalAcceptTerms"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="h-4 w-4 text-purple focus:ring-purple border-gray-300 rounded"
+            />
+            <label htmlFor="modalAcceptTerms" className="ml-2 block text-sm text-gray-700">
+              I accept these terms and conditions
+            </label>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={() => setShowTermsModal(false)}
+              className="px-4 py-2 bg-purple text-white rounded-md text-sm font-medium hover:bg-purple"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -320,14 +390,16 @@ const BookItem = () => {
 
   return (
     <div className="bg-white min-h-screen py-10">
+      {showTermsModal && <TermsModal />}
+      
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl py-8 sm:py-12 lg:max-w-none lg:py-16">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Book {item.title}</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Booking {item.title}</h1>
           
           <div className="flex flex-col lg:flex-row gap-12">
             {/* Calendar Section */}
             <div className="w-full lg:w-1/2">
-              <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="bg-white border border-purple-200 p-6 rounded-3xl shadow-md">
                 <h2 className="text-xl font-semibold mb-4">Select Dates</h2>
                 <CustomCalendar 
                   dateRange={dateRange} 
@@ -338,7 +410,7 @@ const BookItem = () => {
             
             {/* Booking Summary */}
             <div className="w-full lg:w-1/2">
-              <div className="bg-white p-6 rounded-lg shadow-md">
+              <div className="bg-white p-6 rounded-3xl shadow-md border border-purple-200">
                 <h2 className="text-xl font-semibold mb-6">Booking Summary</h2>
                 
                 <div className="space-y-4 mb-6">
@@ -369,35 +441,69 @@ const BookItem = () => {
                     </span>
                   </div>
                   
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">Total Rental Price:</span>
+                    <span className="font-medium">
+                      {startDate && endDate ? (
+                        `NPR ${(differenceInDays(endDate, startDate) + 1) * item.pricePerDay}`
+                      ) : (
+                        "-"
+                      )}
+                    </span>
+                  </div>
+                  
                   <div className="border-t pt-4">
                     <div className="flex justify-between font-semibold text-lg">
-                      <span>Total Price:</span>
+                      <span>Initial Payment (10%):</span>
                       <span className="text-purple">
                         {startDate && endDate ? (
-                          `NPR ${(differenceInDays(endDate, startDate) + 1) * item.pricePerDay}`
+                          `NPR ${Math.round((differenceInDays(endDate, startDate) + 1) * item.pricePerDay * 0.1)}`
                         ) : (
                           "-"
                         )}
                       </span>
                     </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      This 10% payment secures your booking. The remaining 90% need to be paid when you collect the item.
+                    </p>
                   </div>
                 </div>
                 
+                {/* Compact Terms Acceptance */}
+                <div className="mt-4 flex items-center">
+                  <input
+                    type="checkbox"
+                    id="acceptTerms"
+                    checked={acceptedTerms}
+                    onChange={(e) => {
+                      if (!acceptedTerms) {
+                        setShowTermsModal(true);
+                      } else {
+                        setAcceptedTerms(false);
+                      }
+                    }}
+                    className="h-4 w-4 text-purple focus:ring-purple border-gray-300 rounded"
+                  />
+                  <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-700">
+                    I accept all terms and conditions
+                  </label>
+                </div>
+
                 <button
                   onClick={handleSubmitBooking}
-                  disabled={submitting || !startDate || !endDate}
-                  className={`w-full py-3 px-4 rounded-lg text-white font-medium transition-colors ${
-                    submitting || !startDate || !endDate 
-                      ? "bg-purple cursor-not-allowed" 
-                      : "bg-purple hover:bg-purplehover"
+                  disabled={submitting || !startDate || !endDate || !acceptedTerms}
+                  className={`w-full mt-6 py-3 px-4 rounded-lg text-white font-medium ${
+                    submitting || !startDate || !endDate || !acceptedTerms
+                      ? "bg-purple cursor-not-allowed"
+                      : "bg-purple hover:bg-purple"
                   }`}
                 >
-                  {submitting ? "Processing..." : "Confirm Booking"}
+                  {submitting ? "Processing..." : "Pay 10% to Book Now"}
                 </button>
                 
                 <button
                   onClick={() => navigate(-1)}
-                  className="w-full mt-4 py-3 px-4 rounded-lg border border-purple text-purple font-medium  transition-colors"
+                  className="w-full mt-4 py-3 px-4 rounded-lg border border-purple text-purple font-medium hover:bg-purple-50 transition-colors"
                 >
                   Back to Item
                 </button>

@@ -96,6 +96,11 @@ const UserDashboardLayout = () => {
               <FaLocationArrow /> Manage Items
             </Link>
           </li>
+          <li>
+            <Link to="/user-dashboard/userbooking">
+              <FaLocationArrow /> Booking Tracking
+            </Link>
+          </li>
           <hr />
           {sharedLinks}
         </ul>

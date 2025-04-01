@@ -179,76 +179,218 @@ exports.getBookingById = async (req, res) => {
 };
 
 // Update booking status
+// Update booking status (improved)
 exports.updateBookingStatus = async (req, res) => {
-    try {
-        const { bookingId } = req.params;
-        const { status, cancellationReason } = req.body;
+  try {
+    const { bookingId } = req.params;
+    const { status, cancellationReason } = req.body;
 
-        // Validate status
-        const validStatuses = ["confirmed", "cancelled", "completed", "rejected"];
-        if (!validStatuses.includes(status)) {
-            return res.status(400).json({ 
-                success: false,
-                message: "Invalid status" 
-            });
-        }
-
-        const booking = await Booking.findByIdAndUpdate(
-            bookingId,
-            {
-                status,
-                cancellationReason,
-                updatedAt: Date.now()
-            },
-            { new: true }
-        );
-
-        if (!booking) {
-            return res.status(404).json({ 
-                success: false,
-                message: "Booking not found" 
-            });
-        }
-
-        res.json({
-            success: true,
-            message: `Booking ${status} successfully`,
-            booking
-        });
-
-    } catch (error) {
-        console.error("Error updating booking status:", error);
-        res.status(500).json({ 
-            success: false,
-            message: "Internal server error",
-            error: error.message 
-        });
+    // Validate status
+    const validStatuses = ["pending", "confirmed", "cancelled", "completed", "rejected"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid status" 
+      });
     }
+
+    // Additional business logic checks
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Booking not found" 
+      });
+    }
+
+    // Prevent invalid status transitions
+    if (booking.status === 'completed' && status !== 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: "Completed bookings cannot be modified"
+      });
+    }
+
+    // Require cancellation reason for cancellations
+    if (status === 'cancelled' && !cancellationReason?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Cancellation reason is required"
+      });
+    }
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      bookingId,
+      {
+        status,
+        cancellationReason: status === 'cancelled' ? cancellationReason : undefined,
+        updatedAt: Date.now()
+      },
+      { new: true }
+    ).populate(['lender', 'renter', 'item']);
+
+    res.json({
+      success: true,
+      message: `Booking status updated to ${status}`,
+      booking: updatedBooking
+    });
+
+  } catch (error) {
+    console.error("Error updating booking status:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
 };
 
 // Get bookings by user
 exports.getUserBookings = async (req, res) => {
-    try {
-        const { userId } = req.params;
+  try {
+      const { userId } = req.params;
 
-        const bookings = await Booking.find({
-            $or: [{ lenderId: userId }, { renterId: userId }]
-        })
-        .populate("lenderId", "name email")
-        .populate("renterId", "name email")
-        .populate("itemId", "title pricePerDay");
+      const bookings = await Booking.find({
+          $or: [{ lender: userId }, { renter: userId }] // Changed from lenderId/renterId
+      })
+      .populate("lender", "name email photoURL kycVerified")
+      .populate("renter", "name email photoURL kycVerified")
+      .populate("item", "title pricePerDay images");
 
-        res.json({
-            success: true,
-            count: bookings.length,
-            bookings
-        });
-    } catch (error) {
-        console.error("Error fetching user bookings:", error);
-        res.status(500).json({ 
-            success: false,
-            message: "Internal server error",
-            error: error.message 
-        });
+      res.json({
+          success: true,
+          count: bookings.length,
+          bookings
+      });
+  } catch (error) {
+      console.error("Error fetching user bookings:", error);
+      res.status(500).json({ 
+          success: false,
+          message: "Internal server error",
+          error: error.message 
+      });
+  }
+};
+// Delete a booking
+exports.deleteBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    // Check if booking exists
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found"
+      });
     }
+
+    // Prevent deletion of confirmed/completed bookings
+    if (['confirmed', 'completed'].includes(booking.status)) {
+      return res.status(403).json({
+        success: false,
+        message: `Cannot delete ${booking.status} bookings`
+      });
+    }
+
+    await Booking.findByIdAndDelete(bookingId);
+
+    res.json({
+      success: true,
+      message: "Booking deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Error deleting booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+// Mark booking as active (item handed over)
+exports.markAsActive = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    const booking = await Booking.findById(bookingId);
+    
+    if (!booking) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Booking not found" 
+      });
+    }
+
+    if (booking.status !== 'confirmed') {
+      return res.status(400).json({
+        success: false,
+        message: "Only confirmed bookings can be marked as active"
+      });
+    }
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { status: 'active' },
+      { new: true }
+    ).populate(['lender', 'renter', 'item']);
+
+    res.json({
+      success: true,
+      message: "Booking marked as active - item handed over to renter",
+      booking: updatedBooking
+    });
+
+  } catch (error) {
+    console.error("Error marking booking as active:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
+};
+
+// Mark booking as completed (item returned)
+exports.markAsCompleted = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    const booking = await Booking.findById(bookingId);
+    
+    if (!booking) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Booking not found" 
+      });
+    }
+
+    if (booking.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        message: "Only active bookings can be marked as completed"
+      });
+    }
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { status: 'completed' },
+      { new: true }
+    ).populate(['lender', 'renter', 'item']);
+
+    res.json({
+      success: true,
+      message: "Booking completed - item returned successfully",
+      booking: updatedBooking
+    });
+
+  } catch (error) {
+    console.error("Error marking booking as completed:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
 };

@@ -40,7 +40,7 @@ const Profile = ({ user }) => {
       <div className="drawer-side">
         <label htmlFor="my-drawer-4" className="drawer-overlay"></label>
         <ul className="menu p-4 w-80 min-h-full bg-base-200 text-base-content">
-          <li><Link to='/'>Profile</Link></li>
+          <li><Link to={`/profile/${user.uid}`}>Profile</Link></li>
           <li><Link to='/kycverify'>Verify KYC</Link></li>
           
           {/* Settings with expandable submenu */}

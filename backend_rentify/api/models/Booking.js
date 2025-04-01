@@ -28,7 +28,7 @@ const bookingSchema = new Schema({
   },
   status: { 
     type: String, 
-    enum: ["pending", "confirmed", "cancelled", "completed", "rejected"], 
+    enum: ["pending", "confirmed", "active", "completed", "cancelled", "rejected"], 
     default: "pending" 
   },
   totalPrice: { 
@@ -37,11 +37,11 @@ const bookingSchema = new Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ["card", "wallet", "cash", null],
-    default: null
+    enum: ["cash", "card", "esewa"], // Add "esewa" to the enum values
+    required: true
   },
   cancellationReason: {
-    type: String,
+    type: String, 
     default: null
   }
 }, { timestamps: true });

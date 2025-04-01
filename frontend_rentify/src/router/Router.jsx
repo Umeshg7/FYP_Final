@@ -21,6 +21,8 @@ import Manageuseritems from "../pages/dashboard/user/Manageuseritems";
 import UserDetails from "../pages/userDashboard/userDetails";
 import PublicProfile from "../pages/userDashboard/PublicProfile";
 import BookItem from "../components/BookItem";
+import AdminBookings from "../pages/dashboard/admin/AdminBookings";
+import UserBookings from "../pages/dashboard/user/UserBookings";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -102,6 +104,10 @@ const router = createBrowserRouter([
         path: "verifykycadmin",
         element: <AdminPanel/>,
       },
+      {
+        path: "adminbooking",
+        element: <AdminBookings/>,
+      },
     ],
   },
   {
@@ -119,6 +125,10 @@ const router = createBrowserRouter([
       {
         path: "manageitems",
         element: <Manageuseritems/>,
+      },
+      {
+        path: "userbooking",
+        element: <UserBookings/>,
       },
     ],
   },

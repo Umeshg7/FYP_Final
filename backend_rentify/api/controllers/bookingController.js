@@ -2,6 +2,9 @@ const Booking = require("../models/Booking");
 const Rent = require("../models/Rent");
 const User = require("../models/User")
 const { checkDateAvailability } = require('../../utils/bookingUtils');
+const nodemailer = require("nodemailer");
+const { transporter } = require('../../utils/email');
+
 
 
     
@@ -10,47 +13,25 @@ const { checkDateAvailability } = require('../../utils/bookingUtils');
 
 exports.createBooking = async (req, res) => {
   try {
-    const { lender, renter, item, startDate, endDate, paymentMethod } = req.body;
+    const { lender, lenderEmail, renter, item, startDate, endDate, paymentMethod } = req.body;
 
-    // 1. Validate date range (end date must be after start date)
+    // 1. Validate date range
     if (new Date(endDate) <= new Date(startDate)) {
-      return res.status(400).json({
-        success: false,
-        message: "End date must be after start date"
-      });
+      return res.status(400).json({ error: "End date must be after start date" });
     }
 
-    // 2. Check for existing bookings for the same user on the same dates
-    const existingUserBooking = await Booking.findOne({
-      renter,
-      item,
-      startDate: { $lt: new Date(endDate) },
-      endDate: { $gt: new Date(startDate) },
-      status: { $nin: ["cancelled", "rejected"] }
-    });
-
-    if (existingUserBooking) {
-      return res.status(409).json({
-        success: false,
-        message: "You already have a booking for these dates"
-      });
-    }
-
-    // 3. Check general availability
+    // 2. Check availability
     const isAvailable = await checkDateAvailability(item, startDate, endDate);
     if (!isAvailable) {
-      return res.status(409).json({
-        success: false,
-        message: "The selected dates are not available"
-      });
+      return res.status(409).json({ error: "Selected dates are not available" });
     }
 
-    // 4. Calculate price
-    const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+    // 3. Calculate price
     const itemDetails = await Rent.findById(item);
+    const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
     const totalPrice = itemDetails.pricePerDay * days;
 
-    // 5. Create booking
+    // 4. Create booking
     const booking = new Booking({
       lender,
       renter,
@@ -59,26 +40,61 @@ exports.createBooking = async (req, res) => {
       endDate,
       totalPrice,
       paymentMethod,
-      status: "pending"
+      status: "pending",
     });
 
     await booking.save();
 
-    // 6. Return success response
-    res.status(201).json({
-      success: true,
-      message: "Booking created successfully",
-      booking
-    });
+    // 5. Send email (non-blocking)
+    sendBookingEmail({
+      to: lenderEmail,
+      bookingId: booking._id,
+      startDate,
+      endDate,
+      totalPrice,
+    }).catch(err => console.error("Email error:", err));
 
-  } catch (error) {
-    console.error("Error creating booking:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message
-    });
+    // 6. Return success
+    res.status(201).json({ success: true, booking });
+
+  } catch (err) {
+    console.error("Booking error:", err);
+    res.status(500).json({ error: "Server error" });
   }
+};
+
+
+const sendBookingEmail = async ({ to, bookingId, startDate, endDate, totalPrice }) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: `"Rental App" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: "📅 New Booking Request!",
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #6b46c1;">New Booking Alert!</h2>
+        <p>You have a new booking request:</p>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <p><strong>Booking ID:</strong> ${bookingId}</p>
+          <p><strong>Dates:</strong> ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}</p>
+          <p><strong>Total Price:</strong> $${totalPrice}</p>
+        </div>
+        <a href="http://localhost:5173/" 
+           style="display: inline-block; background: #6b46c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          View Booking
+        </a>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
 };
 
 // Check date availability

@@ -15,6 +15,7 @@ import {
   isSameDay,
   addMonths
 } from "date-fns";
+import CryptoJS from "crypto-js";
 
 const BookItem = () => {
   const { id: itemId } = useParams();
@@ -31,6 +32,7 @@ const BookItem = () => {
   const [submitting, setSubmitting] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('card');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -84,6 +86,8 @@ const BookItem = () => {
     const isBooked = (day) => {
       return bookings.some(booking => {
         if (["cancelled", "rejected"].includes(booking.status)) return false;
+        if (booking.item._id !== itemId) return false;
+        
         const bookingStart = new Date(booking.startDate);
         const bookingEnd = new Date(booking.endDate);
         return isWithinInterval(day, { start: bookingStart, end: bookingEnd });
@@ -201,7 +205,7 @@ const BookItem = () => {
     );
   };
 
-  const handleSubmitBooking = async () => {
+  const handleSubmitBooking = async (paymentCompleted = false) => {
     if (!startDate || !endDate) {
       Swal.fire({
         icon: 'error',
@@ -244,6 +248,8 @@ const BookItem = () => {
     // Check if any dates in range are booked
     const isRangeAvailable = !bookings.some(booking => {
       if (["cancelled", "rejected"].includes(booking.status)) return false;
+      if (booking.item._id !== itemId) return false;
+      
       const bookingStart = new Date(booking.startDate);
       const bookingEnd = new Date(booking.endDate);
       return (
@@ -267,32 +273,41 @@ const BookItem = () => {
       const totalDays = differenceInDays(endDate, startDate) + 1;
       const totalPrice = totalDays * item.pricePerDay;
       const bookingPayment = Math.round(totalPrice * 0.1);
-  
+
       const bookingData = {
         lender: item.userId,
+        lenderEmail: item.userEmail,
         renter: user.uid,
         item: item._id,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         totalPrice: totalPrice,
-        paymentMethod: "card",
+        paymentMethod: paymentMethod,
         acceptedTerms: true,
-        status: "pending"
+        status: paymentCompleted ? "confirmed" : "pending"
       };
-  
-      console.log("Submitting booking data:", bookingData); // For debugging
-  
+
       const res = await axiosSecure.post("/bookings", bookingData);
       
-      Swal.fire({
-        icon: "success",
-        title: "Booking Request Sent!",
-        text: `A 10% payment of NPR ${bookingPayment} is required to secure your booking`,
-        showConfirmButton: false,
-        timer: 2000
-      });
-      
-      navigate(`/bookings/${res.data.booking._id}`);
+      if (paymentCompleted) {
+        Swal.fire({
+          icon: "success",
+          title: "Booking Confirmed!",
+          text: `Your payment of NPR ${bookingPayment} has been received`,
+          showConfirmButton: false,
+          timer: 2000
+        });
+        navigate("/user-dashboard/lent");
+      } else if (paymentMethod === 'card') {
+        Swal.fire({
+          icon: "success",
+          title: "Booking Request Sent!",
+          text: `A 10% payment of NPR ${bookingPayment} is required to secure your booking`,
+          showConfirmButton: false,
+          timer: 2000
+        });
+        navigate("/user-dashboard/lent");
+      }
       
     } catch (err) {
       console.error("Booking error:", err.response?.data || err.message);
@@ -312,6 +327,73 @@ const BookItem = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const EsewaPaymentButton = () => {
+    const initiateEsewaPayment = () => {
+      if (!startDate || !endDate) return;
+      
+      const totalDays = differenceInDays(endDate, startDate) + 1;
+      const totalPrice = totalDays * item.pricePerDay;
+      const bookingPayment = Math.round(totalPrice * 0.1);
+
+      const secretKey = "8gBm/:&EnhH.1/q"; // Replace with your actual key
+      const transactionUUID = `txn_${Date.now()}`;
+      const totalAmount = bookingPayment;
+      const productCode = "EPAYTEST";
+      const signedFieldNames = "total_amount,transaction_uuid,product_code";
+
+      const signatureBase = `total_amount=${totalAmount},transaction_uuid=${transactionUUID},product_code=${productCode}`;
+      const signature = CryptoJS.HmacSHA256(signatureBase, secretKey).toString(CryptoJS.enc.Base64);
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
+
+      const formData = {
+        amount: totalAmount,
+        tax_amount: 0,
+        total_amount: totalAmount,
+        transaction_uuid: transactionUUID,
+        product_code: productCode,
+        product_service_charge: 0,
+        product_delivery_charge: 0,
+        success_url: `${window.location.origin}/payment/success`,
+        failure_url: `${window.location.origin}/payment/failure`,
+        signed_field_names: signedFieldNames,
+        signature: signature,
+      };
+
+      Object.entries(formData).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value);
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+
+      // Cleanup
+      return () => {
+        document.body.removeChild(form);
+      };
+    };
+
+    return (
+      <button 
+        onClick={initiateEsewaPayment}
+        disabled={!startDate || !endDate || !acceptedTerms}
+        className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
+          !startDate || !endDate || !acceptedTerms
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-[#55D046] hover:bg-[#4bb53d]"
+        }`}
+      >
+        Pay with eSewa
+      </button>
+    );
   };
 
   const TermsModal = () => {
@@ -388,6 +470,10 @@ const BookItem = () => {
     );
   }
 
+  const totalDays = startDate && endDate ? differenceInDays(endDate, startDate) + 1 : 0;
+  const totalPrice = totalDays * item.pricePerDay;
+  const bookingPayment = Math.round(totalPrice * 0.1);
+
   return (
     <div className="bg-white min-h-screen py-10">
       {showTermsModal && <TermsModal />}
@@ -433,22 +519,14 @@ const BookItem = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-700">Number of Days:</span>
                     <span className="font-medium">
-                      {startDate && endDate ? (
-                        `${differenceInDays(endDate, startDate) + 1} days`
-                      ) : (
-                        "-"
-                      )}
+                      {startDate && endDate ? `${totalDays} days` : "-"}
                     </span>
                   </div>
                   
                   <div className="flex justify-between">
                     <span className="text-gray-700">Total Rental Price:</span>
                     <span className="font-medium">
-                      {startDate && endDate ? (
-                        `NPR ${(differenceInDays(endDate, startDate) + 1) * item.pricePerDay}`
-                      ) : (
-                        "-"
-                      )}
+                      {startDate && endDate ? `NPR ${totalPrice}` : "-"}
                     </span>
                   </div>
                   
@@ -456,11 +534,7 @@ const BookItem = () => {
                     <div className="flex justify-between font-semibold text-lg">
                       <span>Initial Payment (10%):</span>
                       <span className="text-purple">
-                        {startDate && endDate ? (
-                          `NPR ${Math.round((differenceInDays(endDate, startDate) + 1) * item.pricePerDay * 0.1)}`
-                        ) : (
-                          "-"
-                        )}
+                        {startDate && endDate ? `NPR ${bookingPayment}` : "-"}
                       </span>
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
@@ -489,17 +563,43 @@ const BookItem = () => {
                   </label>
                 </div>
 
-                <button
-                  onClick={handleSubmitBooking}
-                  disabled={submitting || !startDate || !endDate || !acceptedTerms}
-                  className={`w-full mt-6 py-3 px-4 rounded-lg text-white font-medium ${
-                    submitting || !startDate || !endDate || !acceptedTerms
-                      ? "bg-purple cursor-not-allowed"
-                      : "bg-purple hover:bg-purple"
-                  }`}
-                >
-                  {submitting ? "Processing..." : "Pay 10% to Book Now"}
-                </button>
+                {/* Payment Method Selection */}
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={() => setPaymentMethod('card')}
+                      className={`px-4 py-2 rounded-lg border ${
+                        paymentMethod === 'card' ? 'border-purple bg-purple-50 text-purple' : 'border-gray-300'
+                      }`}
+                    >
+                      Credit/Debit Card
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod('esewa')}
+                      className={`px-4 py-2 rounded-lg border ${
+                        paymentMethod === 'esewa' ? 'border-[#55D046] bg-[#f0f9ef] text-[#55D046]' : 'border-gray-300'
+                      }`}
+                    >
+                      eSewa
+                    </button>
+                  </div>
+
+                  {paymentMethod === 'card' ? (
+                    <button
+                      onClick={() => handleSubmitBooking()}
+                      disabled={submitting || !startDate || !endDate || !acceptedTerms}
+                      className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
+                        submitting || !startDate || !endDate || !acceptedTerms
+                          ? "bg-purple-300 cursor-not-allowed"
+                          : "bg-purple hover:bg-purple-700"
+                      }`}
+                    >
+                      {submitting ? "Processing..." : "Pay 10% to Book Now"}
+                    </button>
+                  ) : (
+                    <EsewaPaymentButton />
+                  )}
+                </div>
                 
                 <button
                   onClick={() => navigate(-1)}

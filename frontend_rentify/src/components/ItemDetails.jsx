@@ -34,21 +34,57 @@ const ItemDetails = () => {
     navigate(`/book/${id}`);
   };
 
-  const handleChatNow = (e) => {
-    e.stopPropagation();
-    if (!user) {
+  // In your ItemDetails component
+const handleChatNow = async (e) => {
+  e.stopPropagation();
+  
+  if (!user) {
       Swal.fire({
-        icon: "warning",
-        title: "Login Required",
-        text: "Please login to start chatting",
+          icon: "warning",
+          title: "Login Required",
+          text: "Please login to start chatting",
       });
       return;
-    }
-    // Implement your chat functionality here
-    console.log("Chatting with:", displayOwnerInfo.name);
-    // Example: navigate(`/chat/${product.userId}`);
-  };
+  }
 
+  try {
+      // Check if we have owner info
+      if (!ownerInfo?.email) {
+          throw new Error("Owner information not available");
+      }
+
+      // Don't allow chatting with yourself
+      if (ownerInfo.email === user.email) {
+          Swal.fire({
+              icon: "error",
+              title: "Can't chat with yourself",
+              text: "You can't start a chat with yourself",
+          });
+          return;
+      }
+
+      // Create or get conversation
+      const response = await axiosSecure.post("/messages/conversations", {
+          participant1: user.email,
+          participant2: ownerInfo.email,
+          participant1Id: user.uid,
+          participant2Id: product.userId
+      });
+
+      // Navigate to the chat page
+      navigate(`/chat`);
+  } catch (error) {
+      console.error("Error starting chat:", error);
+      Swal.fire({
+          icon: "error",
+          title: "Chat Error",
+          text: "An error occurred while starting the chat",
+      });
+  }
+};
+
+
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -88,6 +124,8 @@ const ItemDetails = () => {
     fetchData();
   }, [id, axiosSecure]);
 
+  
+
   const handlePrevImage = () => {
     if (!product?.images?.length) return;
     setCurrentImageIndex((prevIndex) => 
@@ -110,6 +148,8 @@ const ItemDetails = () => {
     setSelectedImage(null);
   };
 
+
+  
   const getImageUrl = (url) => {
     if (!url) return "https://via.placeholder.com/400";
     if (url.startsWith("http://")) url = url.replace("http://", "https://");
@@ -139,6 +179,7 @@ const ItemDetails = () => {
       </div>
     );
   }
+
 
   if (!product) {
     return (

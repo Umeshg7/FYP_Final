@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FaPhone, FaEnvelope, FaAngleRight, FaAngleLeft } from 'react-icons/fa';
+import { FaPhone, FaEnvelope, FaAngleRight, FaAngleLeft, FaComment, FaPhoneAlt } from 'react-icons/fa';
 import { MdVerified } from 'react-icons/md';
 import Slider from 'react-slick';
 import "slick-carousel/slick/slick.css";
@@ -13,27 +13,41 @@ const PublicProfile = () => {
   const [userRentals, setUserRentals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dataAvailable, setDataAvailable] = useState(true);
   const slider = React.useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
+        setDataAvailable(true);
         
         const userResponse = await fetch(`http://localhost:6001/users/${userId}`);
-        if (!userResponse.ok) throw new Error('Failed to fetch user data');
+        if (!userResponse.ok) {
+          if (userResponse.status === 404) {
+            setDataAvailable(false);
+            return;
+          }
+          throw new Error('Failed to fetch user data');
+        }
         const userData = await userResponse.json();
         
         const rentalsResponse = await fetch(`http://localhost:6001/rent/user/${userId}`);
-        if (!rentalsResponse.ok) throw new Error('Failed to fetch user rentals');
-        const rentalsData = await rentalsResponse.json();
+        if (!rentalsResponse.ok) {
+          // Don't treat no rentals as an error, just set empty array
+          setUserRentals([]);
+        } else {
+          const rentalsData = await rentalsResponse.json();
+          setUserRentals(rentalsData);
+        }
         
         setUserData(userData.data);
-        setUserRentals(rentalsData);
         setLoading(false);
       } catch (err) {
         setError(err.message);
         setLoading(false);
+        setDataAvailable(false);
       }
     };
 
@@ -83,23 +97,25 @@ const PublicProfile = () => {
     );
   }
 
+  if (!dataAvailable) {
+    return (
+      <div className="max-w-6xl mx-auto p-4">
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Notice!</strong>
+          <span className="block sm:inline"> No data available for this user</span>
+          <Link to="/" className="mt-2 block text-blue-600 hover:underline">Return to homepage</Link>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="max-w-6xl mx-auto p-4">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
           <strong className="font-bold">Error!</strong>
           <span className="block sm:inline"> {error}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!userData) {
-    return (
-      <div className="max-w-6xl mx-auto p-4">
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Notice!</strong>
-          <span className="block sm:inline"> User not found</span>
+          <Link to="/" className="mt-2 block text-blue-600 hover:underline">Return to homepage</Link>
         </div>
       </div>
     );
@@ -158,16 +174,38 @@ const PublicProfile = () => {
                     <FaEnvelope className="text-gray-500" />
                     <p className="text-gray-600">{userData?.email}</p>
                   </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <FaPhoneAlt className="text-gray-500" />
+                    <p className="text-gray-600">{userData?.phoneNumber}</p>
+                  </div>
                 </div>
                 
                 {/* Contact Buttons */}
                 <div className="flex gap-2">
-                  <button className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-2 rounded-lg hover:bg-blue-200 transition-colors">
-                    <FaPhone size={14} /> Call
-                  </button>
-                  <button className="flex items-center gap-2 bg-green-100 text-green-800 px-3 py-2 rounded-lg hover:bg-green-200 transition-colors">
-                    <FaEnvelope size={14} /> Message
-                  </button>
+                <button
+                  className="flex items-center gap-2 bg-white text-purple px-4 py-2 rounded-full border-2 border-purple shadow-md hover:shadow-lg transition-all"
+                  style={{
+                    boxShadow: "2px 2px 5px rgba(0,0,0,0.1)",
+                    borderRadius: "2rem 2rem 2rem 0"
+                  }}
+                >
+                  <div className="bg-white text-purple p-1 rounded-full">
+                    <FaPhone />
+                  </div>
+                  <span>Call Now</span>
+                </button>
+                <button
+                  className="flex items-center gap-2 bg-white text-purple px-4 py-2 rounded-full border-2 border-purple shadow-md hover:shadow-lg transition-all"
+                  style={{
+                    boxShadow: "2px 2px 5px rgba(0,0,0,0.1)",
+                    borderRadius: "2rem 2rem 2rem 0"
+                  }}
+                >
+                  <div className="bg-white text-purple p-1 rounded-full">
+                    <FaComment />
+                  </div>
+                  <span>Chat Now</span>
+                </button>
                 </div>
               </div>
             </div>
@@ -211,14 +249,6 @@ const PublicProfile = () => {
         ) : (
           <div className="text-center py-8">
             <p className="text-gray-500">No listings found</p>
-            {userData?.role === 'admin' && (
-              <Link 
-                to="/add-rent" 
-                className="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              >
-                Create Your First Listing
-              </Link>
-            )}
           </div>
         )}
       </div>

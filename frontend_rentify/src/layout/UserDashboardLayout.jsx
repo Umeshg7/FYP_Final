@@ -97,7 +97,7 @@ const UserDashboardLayout = () => {
             </Link>
           </li>
           <li>
-            <Link to="/user-dashboard/userbooking">
+            <Link to="/user-dashboard/lent">
               <FaLocationArrow /> Booking Tracking
             </Link>
           </li>

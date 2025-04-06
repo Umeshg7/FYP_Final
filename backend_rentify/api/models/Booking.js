@@ -1,4 +1,3 @@
-// models/Booking.js
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
@@ -28,7 +27,7 @@ const bookingSchema = new Schema({
   },
   status: { 
     type: String, 
-    enum: ["pending", "confirmed", "active", "completed", "cancelled", "rejected"], 
+    enum: ["pending", "payment_pending", "confirmed", "active", "completed", "cancelled", "rejected"], 
     default: "pending" 
   },
   totalPrice: { 
@@ -37,8 +36,12 @@ const bookingSchema = new Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ["cash", "card", "esewa"], // Add "esewa" to the enum values
+    enum: ["cash", "card", "esewa"],
     required: true
+  },
+  paymentDetails: {
+    type: Object,
+    default: null
   },
   cancellationReason: {
     type: String, 

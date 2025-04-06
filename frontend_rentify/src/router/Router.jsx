@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import Main from "../layout/Main";
 import Home from "../pages/home/home";
 import Rent from "../pages/home/Shop/Rent";
+import AuthProvider from '../Contexts/AuthProvider';
 import Signup from "../components/Signup";
 import Login from "../components/Login";
 import UpdateProfile from "../pages/userDashboard/UpdateProfile";
@@ -22,11 +23,11 @@ import UserDetails from "../pages/userDashboard/userDetails";
 import PublicProfile from "../pages/userDashboard/PublicProfile";
 import BookItem from "../components/BookItem";
 import AdminBookings from "../pages/dashboard/admin/AdminBookings";
-import UserBookings from "../pages/dashboard/user/UserBookings";
+import UserBooking from "../pages/dashboard/user/UserBooking";
 const router = createBrowserRouter([
   {
-    path: "/",
-    element: <Main />,
+      path: '/',
+      element:<Main/>,
     children: [
       {
         path: "/",
@@ -48,6 +49,9 @@ const router = createBrowserRouter([
         path: "/item/:id", // This is the dynamic route for item details
         element: <ItemDetails />, // Add the component here
       },
+      {
+        path: "/chat/",
+      },
     ],
   },
   {
@@ -63,6 +67,7 @@ const router = createBrowserRouter([
     path: "/login",
     element: <Login />,
   },
+  
   {
     path: "/signup",
     element: <Signup />,
@@ -127,8 +132,8 @@ const router = createBrowserRouter([
         element: <Manageuseritems/>,
       },
       {
-        path: "userbooking",
-        element: <UserBookings/>,
+        path: "lent",
+        element: <UserBooking/>,
       },
     ],
   },

@@ -135,7 +135,6 @@ const AdminBookings = () => {
               <th>Renter</th>
               <th>Dates</th>
               <th>Price</th>
-              <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -188,16 +187,6 @@ const AdminBookings = () => {
                   </div>
                 </td>
                 <td>${booking.totalPrice?.toFixed(2) || '0.00'}</td>
-                <td>
-                  <span className={`badge ${
-                    booking.status === 'confirmed' ? 'badge-success' :
-                    booking.status === 'pending' ? 'badge-warning' :
-                    booking.status === 'cancelled' ? 'badge-error' :
-                    'badge-info'
-                  }`}>
-                    {booking.status}
-                  </span>
-                </td>
                 <td>
                   <div className="flex gap-2">
                     <select

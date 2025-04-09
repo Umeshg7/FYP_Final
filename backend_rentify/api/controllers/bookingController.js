@@ -1,37 +1,29 @@
 const Booking = require("../models/Booking");
 const Rent = require("../models/Rent");
-const User = require("../models/User")
+const User = require("../models/User");
 const { checkDateAvailability } = require('../../utils/bookingUtils');
 const nodemailer = require("nodemailer");
 const { transporter } = require('../../utils/email');
-
-
-
-    
+const mongoose = require('mongoose');
 
 // Create a new booking
-
 exports.createBooking = async (req, res) => {
   try {
     const { lender, lenderEmail, renter, item, startDate, endDate, paymentMethod } = req.body;
 
-    // 1. Validate date range
     if (new Date(endDate) <= new Date(startDate)) {
       return res.status(400).json({ error: "End date must be after start date" });
     }
 
-    // 2. Check availability
     const isAvailable = await checkDateAvailability(item, startDate, endDate);
     if (!isAvailable) {
       return res.status(409).json({ error: "Selected dates are not available" });
     }
 
-    // 3. Calculate price
     const itemDetails = await Rent.findById(item);
     const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
     const totalPrice = itemDetails.pricePerDay * days;
 
-    // 4. Create booking
     const booking = new Booking({
       lender,
       renter,
@@ -45,7 +37,6 @@ exports.createBooking = async (req, res) => {
 
     await booking.save();
 
-    // 5. Send email (non-blocking)
     sendBookingEmail({
       to: lenderEmail,
       bookingId: booking._id,
@@ -54,7 +45,6 @@ exports.createBooking = async (req, res) => {
       totalPrice,
     }).catch(err => console.error("Email error:", err));
 
-    // 6. Return success
     res.status(201).json({ success: true, booking });
 
   } catch (err) {
@@ -63,146 +53,115 @@ exports.createBooking = async (req, res) => {
   }
 };
 
-
-const sendBookingEmail = async ({ to, bookingId, startDate, endDate, totalPrice }) => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS,
-    },
-  });
-
-  const mailOptions = {
-    from: `"Rental App" <${process.env.GMAIL_USER}>`,
-    to,
-    subject: "📅 New Booking Request!",
-    html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #6b46c1;">New Booking Alert!</h2>
-        <p>You have a new booking request:</p>
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
-          <p><strong>Booking ID:</strong> ${bookingId}</p>
-          <p><strong>Dates:</strong> ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}</p>
-          <p><strong>Total Price:</strong> $${totalPrice}</p>
-        </div>
-        <a href="http://localhost:5173/" 
-           style="display: inline-block; background: #6b46c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-          View Booking
-        </a>
-      </div>
-    `,
-  };
-
-  await transporter.sendMail(mailOptions);
-};
-
 // Check date availability
 exports.checkAvailability = async (req, res) => {
-    try {
-        const { itemId } = req.params;
-        const { startDate, endDate } = req.query;
+  try {
+    const { itemId } = req.params;
+    const { startDate, endDate } = req.query;
 
-        if (!itemId || !startDate || !endDate) {
-            return res.status(400).json({ 
-                success: false,
-                message: "Missing required parameters" 
-            });
-        }
-
-        const isAvailable = await checkDateAvailability(itemId, startDate, endDate);
-
-        res.json({
-            success: true,
-            available: isAvailable,
-            message: isAvailable 
-                ? "Dates are available" 
-                : "Dates are not available"
-        });
-
-    } catch (error) {
-        console.error("Error checking availability:", error);
-        res.status(500).json({ 
-            success: false,
-            message: "Internal server error",
-            error: error.message 
-        });
+    if (!itemId || !startDate || !endDate) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Missing required parameters" 
+      });
     }
+
+    const isAvailable = await checkDateAvailability(itemId, startDate, endDate);
+
+    res.json({
+      success: true,
+      available: isAvailable,
+      message: isAvailable 
+        ? "Dates are available" 
+        : "Dates are not available"
+    });
+
+  } catch (error) {
+    console.error("Error checking availability:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
 };
 
 // Get all bookings
-// controllers/bookingController.js
 exports.getAllBookings = async (req, res) => {
-    try {
-      const bookings = await Booking.find()
-        .populate({
-          path: 'lender',
-          model: 'User',
-          select: 'name email photoURL kycVerified'
-        })
-        .populate({
-          path: 'renter',
-          model: 'User',
-          select: 'name email photoURL kycVerified'
-        })
-        .populate('item', 'title pricePerDay images');
-  
-      res.json({
-        success: true,
-        count: bookings.length,
-        bookings
+  try {
+    const bookings = await Booking.find()
+      .populate({
+        path: 'lender',
+        model: 'User',
+        select: 'name email photoURL kycVerified'
+      })
+      .populate({
+        path: 'renter',
+        model: 'User',
+        select: 'name email photoURL kycVerified'
+      })
+      .populate({
+        path: 'item',
+        select: 'title pricePerDay images averageRating reviewCount'
       });
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
-      res.status(500).json({ 
-        success: false,
-        message: "Error fetching bookings",
-        error: error.message
-      });
-    }
-  };
+
+    res.json({
+      success: true,
+      count: bookings.length,
+      bookings
+    });
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Error fetching bookings",
+      error: error.message
+    });
+  }
+};
 
 // Get booking by ID
 exports.getBookingById = async (req, res) => {
-    try {
-        const { bookingId } = req.params;
+  try {
+    const { bookingId } = req.params;
 
-        const booking = await Booking.findById(bookingId)
-            .populate("lenderId", "name email")
-            .populate("renterId", "name email")
-            .populate("itemId", "title pricePerDay");
+    const booking = await Booking.findById(bookingId)
+      .populate("lender", "name email photoURL")
+      .populate("renter", "name email photoURL")
+      .populate({
+        path: "item",
+        select: "title pricePerDay images averageRating reviewCount"
+      });
 
-        if (!booking) {
-            return res.status(404).json({ 
-                success: false,
-                message: "Booking not found" 
-            });
-        }
-
-        res.json({
-            success: true,
-            booking
-        });
-
-    } catch (error) {
-        console.error("Error fetching booking:", error);
-        res.status(500).json({ 
-            success: false,
-            message: "Internal server error",
-            error: error.message 
-        });
+    if (!booking) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Booking not found" 
+      });
     }
+
+    res.json({
+      success: true,
+      booking
+    });
+
+  } catch (error) {
+    console.error("Error fetching booking:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
 };
 
 // Update booking status
-// Update booking status (improved)
 exports.updateBookingStatus = async (req, res) => {
   try {
     const { bookingId } = req.params;
     const { status, cancellationReason } = req.body;
 
-    // Validate status
-    const validStatuses = ["pending", "confirmed", "cancelled", "completed", "rejected"];
+    const validStatuses = ["pending", "payment_pending", "confirmed", "active", "completed", "cancelled", "rejected"];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ 
         success: false,
@@ -210,7 +169,6 @@ exports.updateBookingStatus = async (req, res) => {
       });
     }
 
-    // Additional business logic checks
     const booking = await Booking.findById(bookingId);
     if (!booking) {
       return res.status(404).json({ 
@@ -219,31 +177,45 @@ exports.updateBookingStatus = async (req, res) => {
       });
     }
 
-    // Prevent invalid status transitions
-    if (booking.status === 'completed' && status !== 'completed') {
+    const allowedTransitions = {
+      pending: ['payment_pending', 'confirmed', 'rejected', 'cancelled'],
+      payment_pending: ['confirmed', 'cancelled'],
+      confirmed: ['active', 'cancelled'],
+      active: ['completed', 'cancelled'],
+      completed: [],
+      cancelled: [],
+      rejected: []
+    };
+
+    if (!allowedTransitions[booking.status].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Completed bookings cannot be modified"
+        message: `Cannot change status from ${booking.status} to ${status}`
       });
     }
 
-    // Require cancellation reason for cancellations
-    if (status === 'cancelled' && !cancellationReason?.trim()) {
+    if (['cancelled', 'rejected'].includes(status) && !cancellationReason?.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Cancellation reason is required"
+        message: `${status} reason is required`
       });
     }
+
+    const updateData = {
+      status,
+      ...(['cancelled', 'rejected'].includes(status) && { cancellationReason }),
+      updatedAt: Date.now()
+    };
 
     const updatedBooking = await Booking.findByIdAndUpdate(
       bookingId,
-      {
-        status,
-        cancellationReason: status === 'cancelled' ? cancellationReason : undefined,
-        updatedAt: Date.now()
-      },
+      updateData,
       { new: true }
     ).populate(['lender', 'renter', 'item']);
+
+    if (status === 'completed') {
+      sendCompletionEmail(updatedBooking).catch(console.error);
+    }
 
     res.json({
       success: true,
@@ -264,35 +236,38 @@ exports.updateBookingStatus = async (req, res) => {
 // Get bookings by user
 exports.getUserBookings = async (req, res) => {
   try {
-      const { userId } = req.params;
+    const { userId } = req.params;
 
-      const bookings = await Booking.find({
-          $or: [{ lender: userId }, { renter: userId }] // Changed from lenderId/renterId
-      })
-      .populate("lender", "name email photoURL kycVerified")
-      .populate("renter", "name email photoURL kycVerified")
-      .populate("item", "title pricePerDay images");
+    const bookings = await Booking.find({
+      $or: [{ lender: userId }, { renter: userId }]
+    })
+    .populate("lender", "name email photoURL kycVerified")
+    .populate("renter", "name email photoURL kycVerified")
+    .populate({
+      path: "item",
+      select: "title pricePerDay images averageRating reviewCount"
+    });
 
-      res.json({
-          success: true,
-          count: bookings.length,
-          bookings
-      });
+    res.json({
+      success: true,
+      count: bookings.length,
+      bookings
+    });
   } catch (error) {
-      console.error("Error fetching user bookings:", error);
-      res.status(500).json({ 
-          success: false,
-          message: "Internal server error",
-          error: error.message 
-      });
+    console.error("Error fetching user bookings:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error",
+      error: error.message 
+    });
   }
 };
+
 // Delete a booking
 exports.deleteBooking = async (req, res) => {
   try {
     const { bookingId } = req.params;
 
-    // Check if booking exists
     const booking = await Booking.findById(bookingId);
     if (!booking) {
       return res.status(404).json({
@@ -301,7 +276,6 @@ exports.deleteBooking = async (req, res) => {
       });
     }
 
-    // Prevent deletion of confirmed/completed bookings
     if (['confirmed', 'completed'].includes(booking.status)) {
       return res.status(403).json({
         success: false,
@@ -325,7 +299,8 @@ exports.deleteBooking = async (req, res) => {
     });
   }
 };
-// Mark booking as active (item handed over)
+
+// Mark booking as active
 exports.markAsActive = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -368,7 +343,7 @@ exports.markAsActive = async (req, res) => {
   }
 };
 
-// Mark booking as completed (item returned)
+// Mark booking as completed
 exports.markAsCompleted = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -395,6 +370,8 @@ exports.markAsCompleted = async (req, res) => {
       { new: true }
     ).populate(['lender', 'renter', 'item']);
 
+    sendCompletionEmail(updatedBooking).catch(console.error);
+
     res.json({
       success: true,
       message: "Booking completed - item returned successfully",
@@ -409,4 +386,196 @@ exports.markAsCompleted = async (req, res) => {
       error: error.message 
     });
   }
+};
+// Submit a review for a booking
+exports.submitReview = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { rating, comment, reviewerRole } = req.body;
+
+    // Validate required fields
+    if (!reviewerRole || !['lender', 'renter'].includes(reviewerRole)) {
+      return res.status(400).json({
+        success: false,
+        message: "Reviewer role is required (must be 'lender' or 'renter')"
+      });
+    }
+
+    // Validate rating
+    if (typeof rating !== 'number' || isNaN(rating)) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating must be a valid number",
+        received: rating
+      });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating must be between 1 and 5",
+        received: rating
+      });
+    }
+
+    // Find booking
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    // Check booking status
+    if (booking.status !== 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: "Only completed bookings can be reviewed"
+      });
+    }
+
+    // Create review
+    booking.review = {
+      rating: Math.round(rating),
+      comment: comment || '',
+      createdAt: new Date(),
+      reviewerRole
+    };
+
+    await booking.save();
+    await updateItemAverageRating(booking.item);
+
+    return res.status(201).json({
+      success: true,
+      message: "Review submitted successfully",
+      review: booking.review
+    });
+
+  } catch (error) {
+    console.error('Review error:', error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+
+// Get reviews for an item
+exports.getItemReviews = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+
+    // Find all completed bookings for this item that have reviews
+    const reviews = await Booking.find({
+      item: itemId,
+      status: 'completed',
+      'review.rating': { $exists: true }
+    })
+    .populate('renter', 'name photoURL')
+    .select('review startDate endDate renter')
+    .sort({ 'review.createdAt': -1 });
+
+    res.json({
+      success: true,
+      count: reviews.length,
+      reviews: reviews.map(r => ({
+        rating: r.review.rating,
+        comment: r.review.comment,
+        date: r.review.createdAt,
+        renter: r.renter,
+        rentalPeriod: {
+          startDate: r.startDate,
+          endDate: r.endDate
+        }
+      }))
+    });
+
+  } catch (error) {
+    console.error("Error fetching item reviews:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+// Helper function to update item's average rating
+async function updateItemAverageRating(itemId) {
+  try {
+    const result = await Booking.aggregate([
+      {
+        $match: {
+          item: new mongoose.Types.ObjectId(itemId), // Add 'new' keyword here
+          'review.rating': { $exists: true, $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: '$item',
+          averageRating: { $avg: '$review.rating' },
+          reviewCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    if (result.length > 0) {
+      await Rent.findByIdAndUpdate(itemId, {
+        averageRating: parseFloat(result[0].averageRating.toFixed(1)),
+        reviewCount: result[0].reviewCount
+      });
+    }
+  } catch (error) {
+    console.error("Error updating item rating:", error);
+    throw error; // Re-throw to handle in calling function
+  }
+}
+
+// Email sending functions
+const sendBookingEmail = async ({ to, bookingId, startDate, endDate, totalPrice }) => {
+  const mailOptions = {
+    from: `"Rental App" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: "📅 New Booking Request!",
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #6b46c1;">New Booking Alert!</h2>
+        <p>You have a new booking request:</p>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <p><strong>Booking ID:</strong> ${bookingId}</p>
+          <p><strong>Dates:</strong> ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}</p>
+          <p><strong>Total Price:</strong> $${totalPrice}</p>
+        </div>
+        <a href="http://localhost:5173/" 
+           style="display: inline-block; background: #6b46c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          View Booking
+        </a>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
+const sendCompletionEmail = async (booking) => {
+  const mailOptions = {
+    from: `"Rental App" <${process.env.GMAIL_USER}>`,
+    to: [booking.lender.email, booking.renter.email],
+    subject: "✅ Booking Completed!",
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #6b46c1;">Booking Completed!</h2>
+        <p>Your rental period has ended. Please leave a review:</p>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <p><strong>Item:</strong> ${booking.item.title}</p>
+          <p><strong>Rental Period:</strong> ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}</p>
+        </div>
+        <a href="http://yourapp.com/booking/${booking._id}/review" 
+           style="display: inline-block; background: #6b46c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          Leave a Review
+        </a>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
 };

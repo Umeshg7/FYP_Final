@@ -46,6 +46,28 @@ const bookingSchema = new Schema({
   cancellationReason: {
     type: String, 
     default: null
+  },
+  review: {
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: null
+    },
+    comment: {
+      type: String,
+      default: null,
+      maxlength: 500
+    },
+    createdAt: {
+      type: Date,
+      default: null
+    },
+    reviewerRole: {
+      type: String,
+      enum: ["lender", "renter"],
+      default: null
+    }
   }
 }, { timestamps: true });
 

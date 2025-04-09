@@ -6,11 +6,15 @@ import {
   FaTimesCircle,
   FaUserTie,
   FaUser,
-  FaInfoCircle
+  FaInfoCircle,
+  FaHandHolding,
+  FaBoxOpen,
+  FaStar
 } from "react-icons/fa";
 import useAxiosSecure from "../../../hooks/useAxiosSecure";
 import { format } from 'date-fns';
 import useAuth from "../../../hooks/useAuth";
+import { toast } from "react-hot-toast";
 
 const UserBookings = () => {
   const { user } = useAuth();
@@ -18,6 +22,10 @@ const UserBookings = () => {
   const [cancellationReason, setCancellationReason] = useState("");
   const [bookingToCancel, setBookingToCancel] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [bookingToReview, setBookingToReview] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
 
   // Fetch all bookings for current user
   const { data: bookingsData = {}, isLoading, refetch } = useQuery({
@@ -47,6 +55,7 @@ const UserBookings = () => {
       .reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
     
     const spent = rentingBookings
+      .filter(booking => ["completed", "confirmed", "active"].includes(booking.status))
       .reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
     
     return { earnings, spent };
@@ -56,10 +65,11 @@ const UserBookings = () => {
 
   // Handle status updates
   const handleUpdateStatus = async (bookingId, newStatus) => {
+    setActionLoading(true);
     try {
       const updateData = { 
         status: newStatus,
-        ...(newStatus === "cancelled" && { cancellationReason }) 
+        ...(["cancelled", "rejected"].includes(newStatus) && { cancellationReason }) 
       };
 
       const response = await axiosSecure.patch(
@@ -68,20 +78,115 @@ const UserBookings = () => {
       );
       
       if (response.data.success) {
-        alert(`Booking ${newStatus} successfully`);
+        toast.success(`Booking marked as ${newStatus.replace('_', ' ')}`);
         setCancellationReason("");
         setBookingToCancel(null);
+        
+        // If status was changed to completed and user is renter, show review modal
+        if (newStatus === "completed") {
+          const booking = bookings.find(b => b._id === bookingId);
+          if (booking && (booking.renter?._id === user?.uid || booking.renter === user?.uid)) {
+            setBookingToReview(booking);
+          }
+        }
+        
         refetch();
       }
     } catch (error) {
-      alert(error.response?.data?.message || "Action failed");
+      toast.error(error.response?.data?.message || "Action failed");
+    } finally {
+      setActionLoading(false);
     }
   };
 
+  console.log("Current token:", localStorage.getItem('access-token'));
+
+  // Handle review submission
+  const handleSubmitReview = async () => {
+    // 1. Validate rating
+    const numericRating = Number(rating);
+    if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+      toast.error("Please select a valid rating (1-5 stars)");
+      return;
+    }
+  
+    // 2. Validate booking reference
+    if (!bookingToReview?._id) {
+      toast.error("Invalid booking reference");
+      return;
+    }
+  
+    try {
+      // 3. Prepare payload with fixed 'renter' role
+      const payload = {
+        rating: numericRating,
+        comment: reviewComment?.trim() || "",
+        reviewerRole: 'renter' // Directly set as renter
+      };
+  
+      console.log("Submitting review payload:", payload);
+  
+      // 4. Make the API request
+      const response = await axiosSecure.post(
+        `/bookings/${bookingToReview._id}/reviews`,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 5000 // 5 second timeout
+        }
+      );
+  
+      // 5. Handle success
+      if (response.data.success) {
+        toast.success("Review submitted successfully!");
+        setBookingToReview(null);
+        setRating(0);
+        setReviewComment("");
+        refetch(); // Refresh data
+      } else {
+        throw new Error(response.data.message || "Unknown error occurred");
+      }
+  
+    } catch (error) {
+      console.error("Complete review error details:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        config: error.config
+      });
+  
+      // 6. User-friendly error messages
+      const errorMessage = error.response?.data?.message || 
+                         error.message || 
+                         "Failed to submit review. Please try again.";
+  
+      toast.error(errorMessage);
+  
+      // 7. Special case handling
+      if (error.response?.status === 401) {
+        // Handle unauthorized (e.g., redirect to login)
+      }
+    }
+  };
   // Format date display
   const formatDate = (dateString) => format(new Date(dateString), 'MMM dd, yyyy');
 
   if (isLoading) return <div className="text-center py-8">Loading...</div>;
+
+  // Status badge component
+  const StatusBadge = ({ status }) => (
+    <span className={`badge ${
+      status === 'confirmed' ? 'badge-success' :
+      status === 'pending' ? 'badge-warning' :
+      status === 'active' ? 'badge-primary' :
+      status === 'completed' ? 'badge-accent' :
+      ['cancelled', 'rejected'].includes(status) ? 'badge-error' :
+      'badge-neutral'
+    }`}>
+      {status.replace('_', ' ')}
+    </span>
+  );
 
   // Booking table component
   const BookingTable = ({ bookings, role }) => (
@@ -103,7 +208,10 @@ const UserBookings = () => {
         <tbody>
           {bookings.map((booking) => {
             const counterparty = role === "lender" ? booking.renter : booking.lender;
-            const amountLabel = role === "lender" ? "Earn" : "Pay";
+            const amountLabel = role === "lender" ? "Earn" : "Paid";
+            const canReview = role === "renter" && 
+                             booking.status === "completed" && 
+                             !booking.review?.rating;
 
             return (
               <tr key={booking._id} className="hover:bg-blue-50">
@@ -154,17 +262,10 @@ const UserBookings = () => {
                   </div>
                 </td>
                 <td>
-                  <span className={`badge ${
-                    booking.status === 'confirmed' ? 'badge-success' :
-                    booking.status === 'pending' ? 'badge-warning' :
-                    booking.status === 'cancelled' ? 'badge-error' :
-                    'badge-info'
-                  }`}>
-                    {booking.status}
-                  </span>
+                  <StatusBadge status={booking.status} />
                 </td>
                 <td>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <button 
                       className="btn btn-xs btn-ghost"
                       onClick={() => setSelectedBooking(booking)}
@@ -174,34 +275,74 @@ const UserBookings = () => {
                     </button>
                     
                     {/* Lender actions */}
-                    {role === "lender" && booking.status === 'pending' && (
+                    {role === "lender" && (
                       <>
-                        <button
-                          onClick={() => handleUpdateStatus(booking._id, "confirmed")}
-                          className="btn btn-xs btn-success text-white"
-                          title="Confirm"
-                        >
-                          <FaCheckCircle />
-                        </button>
-                        <button
-                          onClick={() => setBookingToCancel(booking._id)}
-                          className="btn btn-xs btn-error text-white"
-                          title="Reject"
-                        >
-                          <FaTimesCircle />
-                        </button>
+                        {booking.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateStatus(booking._id, "confirmed")}
+                              className="btn btn-xs btn-success text-white"
+                              title="Confirm"
+                              disabled={actionLoading}
+                            >
+                              <FaCheckCircle />
+                            </button>
+                            <button
+                              onClick={() => setBookingToCancel(booking._id)}
+                              className="btn btn-xs btn-error text-white"
+                              title="Reject"
+                              disabled={actionLoading}
+                            >
+                              <FaTimesCircle />
+                            </button>
+                          </>
+                        )}
+                        {booking.status === 'confirmed' && (
+                          <button
+                            onClick={() => handleUpdateStatus(booking._id, "active")}
+                            className="btn btn-xs btn-primary text-white"
+                            title="Mark as Active (Item Handed Over)"
+                            disabled={actionLoading}
+                          >
+                            <FaHandHolding />
+                          </button>
+                        )}
+                        {booking.status === 'active' && (
+                          <button
+                            onClick={() => handleUpdateStatus(booking._id, "completed")}
+                            className="btn btn-xs btn-accent text-white"
+                            title="Mark as Completed (Item Returned)"
+                            disabled={actionLoading}
+                          >
+                            <FaBoxOpen />
+                          </button>
+                        )}
                       </>
                     )}
                     
                     {/* Renter actions */}
-                    {role === "renter" && ['pending', 'confirmed'].includes(booking.status) && (
-                      <button
-                        onClick={() => setBookingToCancel(booking._id)}
-                        className="btn btn-xs btn-error text-white"
-                        title="Cancel"
-                      >
-                        <FaTimesCircle />
-                      </button>
+                    {role === "renter" && (
+                      <>
+                        {['pending', 'confirmed'].includes(booking.status) && (
+                          <button
+                            onClick={() => setBookingToCancel(booking._id)}
+                            className="btn btn-xs btn-error text-white"
+                            title="Cancel"
+                            disabled={actionLoading}
+                          >
+                            <FaTimesCircle />
+                          </button>
+                        )}
+                        {canReview && (
+                          <button
+                            onClick={() => setBookingToReview(booking)}
+                            className="btn btn-xs btn-warning text-white"
+                            title="Leave Review"
+                          >
+                            <FaStar />
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </td>
@@ -237,14 +378,19 @@ const UserBookings = () => {
               <button 
                 className="btn btn-ghost"
                 onClick={() => setBookingToCancel(null)}
+                disabled={actionLoading}
               >
                 Cancel
               </button>
               <button 
                 className="btn btn-error"
-                onClick={() => handleUpdateStatus(bookingToCancel, "cancelled")}
+                onClick={() => {
+                  const isReject = bookings.find(b => b._id === bookingToCancel)?.status === 'pending';
+                  handleUpdateStatus(bookingToCancel, isReject ? "rejected" : "cancelled");
+                }}
+                disabled={actionLoading || !cancellationReason.trim()}
               >
-                Confirm
+                {actionLoading ? 'Processing...' : 'Confirm'}
               </button>
             </div>
           </div>
@@ -260,18 +406,20 @@ const UserBookings = () => {
               <p><strong>Item:</strong> {selectedBooking.item?.title}</p>
               <p><strong>Dates:</strong> {formatDate(selectedBooking.startDate)} to {formatDate(selectedBooking.endDate)}</p>
               <p><strong>Total:</strong> ${selectedBooking.totalPrice?.toFixed(2)}</p>
-              <p><strong>Status:</strong> 
-                <span className={`ml-2 badge ${
-                  selectedBooking.status === 'confirmed' ? 'badge-success' :
-                  selectedBooking.status === 'pending' ? 'badge-warning' :
-                  selectedBooking.status === 'cancelled' ? 'badge-error' :
-                  'badge-info'
-                }`}>
-                  {selectedBooking.status}
-                </span>
-              </p>
+              <p><strong>Status:</strong> <StatusBadge status={selectedBooking.status} /></p>
               {selectedBooking.cancellationReason && (
                 <p><strong>Cancellation Reason:</strong> {selectedBooking.cancellationReason}</p>
+              )}
+              {selectedBooking.paymentMethod && (
+                <p><strong>Payment Method:</strong> {selectedBooking.paymentMethod}</p>
+              )}
+              {selectedBooking.review?.rating && (
+                <>
+                  <p><strong>Your Rating:</strong> {selectedBooking.review.rating}/5</p>
+                  {selectedBooking.review.comment && (
+                    <p><strong>Your Review:</strong> {selectedBooking.review.comment}</p>
+                  )}
+                </>
               )}
             </div>
             <div className="modal-action">
@@ -281,6 +429,70 @@ const UserBookings = () => {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {bookingToReview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">Leave a Review</h3>
+            <div className="space-y-4">
+              <div>
+                <p className="font-medium mb-2">How would you rate this rental experience?</p>
+                <div className="flex justify-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setRating(star)}
+                      className={`text-3xl ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                    >
+                      <FaStar />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <label className="font-medium mb-2 block">Your Review (optional)</label>
+                <textarea
+                  className="textarea textarea-bordered w-full"
+                  placeholder="Share your experience..."
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-semibold">{bookingToReview.item?.title}</p>
+                  <p className="text-sm text-gray-500">
+                    {formatDate(bookingToReview.startDate)} - {formatDate(bookingToReview.endDate)}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      setBookingToReview(null);
+                      setRating(0);
+                      setReviewComment("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={handleSubmitReview}
+                    disabled={!rating}
+                  >
+                    Submit Review
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

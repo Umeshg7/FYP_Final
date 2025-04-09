@@ -45,7 +45,7 @@ const PaymentSuccess = () => {
           </div>
         )}
         <button 
-          onClick={() => navigate('/user/bookings')}
+          onClick={() => navigate('/user-dashboard/lent')}
           className="btn btn-primary w-full"
         >
           View Bookings

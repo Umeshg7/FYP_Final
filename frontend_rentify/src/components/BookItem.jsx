@@ -33,6 +33,7 @@ const BookItem = () => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [currentBookingId, setCurrentBookingId] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,6 +64,68 @@ const BookItem = () => {
 
     fetchData();
   }, [itemId, axiosSecure]);
+
+  // Handle Esewa payment callback
+  useEffect(() => {
+    const handleEsewaCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment');
+      const bookingId = urlParams.get('bookingId');
+      
+      if (paymentStatus === 'success' && bookingId) {
+        try {
+          setSubmitting(true);
+          
+          // Verify payment with backend and update booking status
+          const verification = await axiosSecure.patch(`/bookings/${bookingId}/verify-payment`, {
+            paymentMethod: 'esewa',
+            paymentStatus: 'paid',
+            status: 'confirmed'
+          });
+  
+          if (verification.data.success) {
+            Swal.fire({
+              icon: "success",
+              title: "Payment Verified!",
+              text: "Your booking has been confirmed",
+              showConfirmButton: false,
+              timer: 2000
+            });
+            navigate("/user-dashboard/rented");
+          } else {
+            throw new Error("Payment verification failed");
+          }
+        } catch (err) {
+          console.error("Payment verification error:", err);
+          Swal.fire({
+            icon: "error",
+            title: "Payment Error",
+            text: err.message || "Failed to verify payment",
+          });
+        } finally {
+          setSubmitting(false);
+          // Clean up the URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } else if (paymentStatus === 'failed' && bookingId) {
+        // Handle failed payment
+        Swal.fire({
+          icon: "error",
+          title: "Payment Failed",
+          text: "Your payment was not successful. Please try again.",
+        });
+        // Optionally delete the pending booking record
+        try {
+          await axiosSecure.delete(`/bookings/${bookingId}`);
+        } catch (err) {
+          console.error("Failed to clean up booking:", err);
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
+  
+    handleEsewaCallback();
+  }, [navigate, axiosSecure]);
 
   const CustomCalendar = ({ dateRange, onChange }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -172,9 +235,9 @@ const BookItem = () => {
                       className={`
                         text-center py-2 text-sm
                         ${isDisabled ? 'text-gray-300' : 'text-gray-800 cursor-pointer'}
-                        ${isBooked(day) ? 'bg-red font-medium' : ''}
-                        ${isToday && !isSelected(day) ? 'border border-purple font-bold' : ''}
-                        ${isStart || isEnd || isInRange ? 'bg-purple text-white' : ''}
+                        ${isBooked(day) ? 'bg-red-100 font-medium' : ''}
+                        ${isToday && !isSelected(day) ? 'border border-purple-500 font-bold' : ''}
+                        ${isStart || isEnd || isInRange ? 'bg-purple-500 text-white' : ''}
                         rounded-md
                       `}
                     >
@@ -189,15 +252,15 @@ const BookItem = () => {
         
         <div className="mt-4 flex items-center space-x-4">
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-red mr-2 rounded-md"></div>
+            <div className="w-4 h-4 bg-red-100 mr-2 rounded-md"></div>
             <span className="text-xs text-gray-600">Booked</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-purple mr-2 rounded-md"></div>
+            <div className="w-4 h-4 bg-purple-500 mr-2 rounded-md"></div>
             <span className="text-xs text-gray-600">Selected</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 border border-purple bg-white mr-2 rounded-md"></div>
+            <div className="w-4 h-4 border border-purple-500 bg-white mr-2 rounded-md"></div>
             <span className="text-xs text-gray-600">Today</span>
           </div>
         </div>
@@ -205,7 +268,35 @@ const BookItem = () => {
     );
   };
 
-  const handleSubmitBooking = async (paymentCompleted = false) => {
+  const createBooking = async () => {
+    try {
+      const totalDays = differenceInDays(endDate, startDate) + 1;
+      const totalPrice = totalDays * item.pricePerDay;
+      const bookingPayment = Math.round(totalPrice * 0.1);
+
+      const bookingData = {
+        lender: item.userId,
+        lenderEmail: item.userEmail,
+        renter: user.uid,
+        item: item._id,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        totalPrice,
+        paymentMethod,
+        acceptedTerms: true,
+        status: "pending",
+        paymentStatus: "pending"
+      };
+
+      const res = await axiosSecure.post("/bookings", bookingData);
+      return res.data.booking._id;
+    } catch (err) {
+      console.error("Booking creation error:", err);
+      throw err;
+    }
+  };
+
+  const handleSubmitBooking = async () => {
     if (!startDate || !endDate) {
       Swal.fire({
         icon: 'error',
@@ -227,7 +318,7 @@ const BookItem = () => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    if (end < start) {
+    if (end <= start) {
       Swal.fire({
         icon: 'error',
         title: 'Invalid Dates',
@@ -245,7 +336,7 @@ const BookItem = () => {
       return;
     }
   
-    // Check if any dates in range are booked
+    // Check date availability
     const isRangeAvailable = !bookings.some(booking => {
       if (["cancelled", "rejected"].includes(booking.status)) return false;
       if (booking.item._id !== itemId) return false;
@@ -270,35 +361,14 @@ const BookItem = () => {
   
     try {
       setSubmitting(true);
-      const totalDays = differenceInDays(endDate, startDate) + 1;
-      const totalPrice = totalDays * item.pricePerDay;
-      const bookingPayment = Math.round(totalPrice * 0.1);
-
-      const bookingData = {
-        lender: item.userId,
-        lenderEmail: item.userEmail,
-        renter: user.uid,
-        item: item._id,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        totalPrice: totalPrice,
-        paymentMethod: paymentMethod,
-        acceptedTerms: true,
-        status: paymentCompleted ? "confirmed" : "pending"
-      };
-
-      const res = await axiosSecure.post("/bookings", bookingData);
       
-      if (paymentCompleted) {
-        Swal.fire({
-          icon: "success",
-          title: "Booking Confirmed!",
-          text: `Your payment of NPR ${bookingPayment} has been received`,
-          showConfirmButton: false,
-          timer: 2000
-        });
-        navigate("/user-dashboard/lent");
-      } else if (paymentMethod === 'card') {
+      if (paymentMethod === 'card') {
+        // For card payments, we handle everything at once
+        const bookingId = await createBooking();
+        const totalDays = differenceInDays(endDate, startDate) + 1;
+        const totalPrice = totalDays * item.pricePerDay;
+        const bookingPayment = Math.round(totalPrice * 0.1);
+
         Swal.fire({
           icon: "success",
           title: "Booking Request Sent!",
@@ -306,7 +376,11 @@ const BookItem = () => {
           showConfirmButton: false,
           timer: 2000
         });
-        navigate("/user-dashboard/lent");
+        navigate("/user-dashboard/rented");
+      } else if (paymentMethod === 'esewa') {
+        // For Esewa, we create the booking first and store its ID
+        const bookingId = await createBooking();
+        setCurrentBookingId(bookingId);
       }
       
     } catch (err) {
@@ -329,16 +403,24 @@ const BookItem = () => {
     }
   };
 
-  const EsewaPaymentButton = () => {
-    const initiateEsewaPayment = () => {
-      if (!startDate || !endDate) return;
+  // Update the EsewaPaymentButton component
+const EsewaPaymentButton = () => {
+  const initiateEsewaPayment = async () => {
+    if (!startDate || !endDate || !acceptedTerms) return;
+    
+    try {
+      setSubmitting(true);
+      
+      // First create the booking record in your database
+      const bookingId = await createBooking();
+      setCurrentBookingId(bookingId);
       
       const totalDays = differenceInDays(endDate, startDate) + 1;
       const totalPrice = totalDays * item.pricePerDay;
       const bookingPayment = Math.round(totalPrice * 0.1);
 
       const secretKey = "8gBm/:&EnhH.1/q"; // Replace with your actual key
-      const transactionUUID = `txn_${Date.now()}`;
+      const transactionUUID = `txn_${Date.now()}_${bookingId}`; // Include bookingId in transaction ID
       const totalAmount = bookingPayment;
       const productCode = "EPAYTEST";
       const signedFieldNames = "total_amount,transaction_uuid,product_code";
@@ -358,8 +440,8 @@ const BookItem = () => {
         product_code: productCode,
         product_service_charge: 0,
         product_delivery_charge: 0,
-        success_url: `${window.location.origin}/payment/success`,
-        failure_url: `${window.location.origin}/payment/failure`,
+        success_url: `http://localhost:5173/payment/success`,
+        failure_url: `http://localhost:5173/payment/failure`,
         signed_field_names: signedFieldNames,
         signature: signature,
       };
@@ -374,27 +456,31 @@ const BookItem = () => {
 
       document.body.appendChild(form);
       form.submit();
-
-      // Cleanup
-      return () => {
-        document.body.removeChild(form);
-      };
-    };
-
-    return (
-      <button 
-        onClick={initiateEsewaPayment}
-        disabled={!startDate || !endDate || !acceptedTerms}
-        className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
-          !startDate || !endDate || !acceptedTerms
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-[#55D046] hover:bg-[#4bb53d]"
-        }`}
-      >
-        Pay with eSewa
-      </button>
-    );
+    } catch (err) {
+      console.error("Esewa initiation error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Payment Error",
+        text: "Failed to initiate payment",
+      });
+      setSubmitting(false);
+    }
   };
+
+  return (
+    <button 
+      onClick={initiateEsewaPayment}
+      disabled={submitting || !startDate || !endDate || !acceptedTerms}
+      className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
+        submitting || !startDate || !endDate || !acceptedTerms
+          ? "bg-gray-400 cursor-not-allowed"
+          : "bg-[#55D046] hover:bg-[#4bb53d]"
+      }`}
+    >
+      {submitting ? "Processing..." : "Pay with eSewa"}
+    </button>
+  );
+};
 
   const TermsModal = () => {
     return (
@@ -426,7 +512,7 @@ const BookItem = () => {
               id="modalAcceptTerms"
               checked={acceptedTerms}
               onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className="h-4 w-4 text-purple focus:ring-purple border-gray-300 rounded"
+              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
             />
             <label htmlFor="modalAcceptTerms" className="ml-2 block text-sm text-gray-700">
               I accept these terms and conditions
@@ -436,7 +522,7 @@ const BookItem = () => {
           <div className="mt-6 flex justify-end">
             <button
               onClick={() => setShowTermsModal(false)}
-              className="px-4 py-2 bg-purple text-white rounded-md text-sm font-medium hover:bg-purple"
+              className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700"
             >
               Close
             </button>
@@ -449,7 +535,7 @@ const BookItem = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
       </div>
     );
   }
@@ -533,7 +619,7 @@ const BookItem = () => {
                   <div className="border-t pt-4">
                     <div className="flex justify-between font-semibold text-lg">
                       <span>Initial Payment (10%):</span>
-                      <span className="text-purple">
+                      <span className="text-purple-600">
                         {startDate && endDate ? `NPR ${bookingPayment}` : "-"}
                       </span>
                     </div>
@@ -556,7 +642,7 @@ const BookItem = () => {
                         setAcceptedTerms(false);
                       }
                     }}
-                    className="h-4 w-4 text-purple focus:ring-purple border-gray-300 rounded"
+                    className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                   />
                   <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-700">
                     I accept all terms and conditions
@@ -569,7 +655,7 @@ const BookItem = () => {
                     <button
                       onClick={() => setPaymentMethod('card')}
                       className={`px-4 py-2 rounded-lg border ${
-                        paymentMethod === 'card' ? 'border-purple bg-purple-50 text-purple' : 'border-gray-300'
+                        paymentMethod === 'card' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-300'
                       }`}
                     >
                       Credit/Debit Card
@@ -586,12 +672,12 @@ const BookItem = () => {
 
                   {paymentMethod === 'card' ? (
                     <button
-                      onClick={() => handleSubmitBooking()}
+                      onClick={handleSubmitBooking}
                       disabled={submitting || !startDate || !endDate || !acceptedTerms}
                       className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
                         submitting || !startDate || !endDate || !acceptedTerms
                           ? "bg-purple-300 cursor-not-allowed"
-                          : "bg-purple hover:bg-purple-700"
+                          : "bg-purple-600 hover:bg-purple-700"
                       }`}
                     >
                       {submitting ? "Processing..." : "Pay 10% to Book Now"}
@@ -603,7 +689,7 @@ const BookItem = () => {
                 
                 <button
                   onClick={() => navigate(-1)}
-                  className="w-full mt-4 py-3 px-4 rounded-lg border border-purple text-purple font-medium hover:bg-purple-50 transition-colors"
+                  className="w-full mt-4 py-3 px-4 rounded-lg border border-purple-600 text-purple-600 font-medium hover:bg-purple-50 transition-colors"
                 >
                   Back to Item
                 </button>

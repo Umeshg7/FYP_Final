@@ -579,3 +579,4 @@ const sendCompletionEmail = async (booking) => {
 
   await transporter.sendMail(mailOptions);
 };
+

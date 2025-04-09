@@ -24,6 +24,9 @@ import PublicProfile from "../pages/userDashboard/PublicProfile";
 import BookItem from "../components/BookItem";
 import AdminBookings from "../pages/dashboard/admin/AdminBookings";
 import UserBooking from "../pages/dashboard/user/UserBooking";
+import PaymentSuccess from "../components/Payment/PaymentSuccess"
+import Paymentfailure from "../components/Payment/PaymentFailure"
+
 const router = createBrowserRouter([
   {
       path: '/',
@@ -75,6 +78,16 @@ const router = createBrowserRouter([
   {
     path : "kycverify",
     element : <KYCForm/>
+  },
+
+
+  //payment routes 
+  {
+    path : "/payment/success",
+    element : <PaymentSuccess/>
+  },  {
+    path : "/payment/failure",
+    element : <Paymentfailure/>
   },
   {
     path : "kycstatus",

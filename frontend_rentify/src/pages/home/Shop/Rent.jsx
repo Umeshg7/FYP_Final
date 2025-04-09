@@ -110,38 +110,58 @@ const Rent = () => {
                 All
               </button>
               <button
-                onClick={() => filterItems("vegetables")}
-                className={selectedCategory === "vegetables" ? "active" : ""}
+                onClick={() => filterItems("vehicles")}
+                className={selectedCategory === "vehicles" ? "active" : ""}
               >
                 Vehicles
               </button>
               <button
-                onClick={() => filterItems("fruits")}
-                className={selectedCategory === "fruits" ? "active" : ""}
+                onClick={() => filterItems("electronics")}
+                className={selectedCategory === "electronics" ? "active" : ""}
               >
-                Books
+                Electronics
               </button>
               <button
-                onClick={() => filterItems("meat")}
-                className={selectedCategory === "meat" ? "active" : ""}
+                onClick={() => filterItems("clothes")}
+                className={selectedCategory === "clothes" ? "active" : ""}
               >
                 Clothes
               </button>
               <button
-                onClick={() => filterItems("grains")}
-                className={selectedCategory === "grains" ? "active" : ""}
+                onClick={() => filterItems("house")}
+                className={selectedCategory === "house" ? "active" : ""}
               >
-                House & Apartments
+                house & Apartments
               </button>
               <button
-                onClick={() => filterItems("dairy")}
-                className={selectedCategory === "dairy" ? "active" : ""}
+                onClick={() => filterItems("sports")}
+                className={selectedCategory === "sports" ? "active" : ""}
               >
                 Sports Equipments
               </button>
+              
               <button
-                onClick={() => filterItems("drinks")}
-                className={selectedCategory === "drinks" ? "active" : ""}
+                onClick={() => filterItems("musical")}
+                className={selectedCategory === "musical" ? "active" : ""}
+              >
+                Musical Instruments
+              </button>
+              
+              <button
+                onClick={() => filterItems("equipment")}
+                className={selectedCategory === "equipment" ? "active" : ""}
+              >
+                Office & Business Equipment
+              </button>
+              <button
+                onClick={() => filterItems("books")}
+                className={selectedCategory === "books" ? "active" : ""}
+              >
+                Books
+              </button>
+              <button
+                onClick={() => filterItems("others")}
+                className={selectedCategory === "others" ? "active" : ""}
               >
                 Others
               </button>
@@ -168,8 +188,7 @@ const Rent = () => {
           </div>
   
           {/* product card */}
-          {/* product card */}
-          <div className="grid md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-6 p-4 lg:p-8">
+          <div className="grid md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-2 p-2 lg:p-2">
          {currentItems.map((item) => (
             <Cards key={item._id} item={item} />
             ))}

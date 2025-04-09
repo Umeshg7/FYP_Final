@@ -12,11 +12,11 @@ const Cards = ({ item }) => {
   // Function to truncate description to 100 characters
   const truncateDescription = (text) => {
     if (text.length <= 100) return text;
-    return text.substring(0, 100) + '...';
+    return text.substring(0, 50) + '...';
   };
 
   return (
-    <div className="p-4">
+    <div className="p-2">
       <div className="card bg-base-100 w-96 shadow-xl relative border-2 border-purple rounded-lg">
         {/* Heart Icon */}
         <div
@@ -38,12 +38,12 @@ const Cards = ({ item }) => {
         </Link>
 
         {/* Card Body */}
-        <div className="card-body p-6">
-          <h2 className="card-title text-2xl font-bold mb-2">{item.title}</h2>
-          <p className="text-gray-600 mb-4">
+        <div className="card-body p-4">
+          <h2 className="card-title text-2xl font-bold mb-1">{item.title}</h2>
+          <p className="text-gray-600 mb-2">
             {truncateDescription(item.description || '')}
           </p>
-          <div className="card-actions justify-between items-center mt-2">
+          <div className="card-actions justify-between items-center mt-1">
             <h5 className="font-semibold text-xl">
               <span className="text-sm text-red-500">Rs. </span>
               {item.pricePerDay}

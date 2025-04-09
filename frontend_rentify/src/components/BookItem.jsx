@@ -234,10 +234,10 @@ const BookItem = () => {
                       onClick={() => handleDateClick(day)}
                       className={`
                         text-center py-2 text-sm
-                        ${isDisabled ? 'text-gray-300' : 'text-gray-800 cursor-pointer'}
-                        ${isBooked(day) ? 'bg-red-100 font-medium' : ''}
-                        ${isToday && !isSelected(day) ? 'border border-purple-500 font-bold' : ''}
-                        ${isStart || isEnd || isInRange ? 'bg-purple-500 text-white' : ''}
+                        ${isDisabled ? 'text-gray' : 'text-gray-800 cursor-pointer'}
+                        ${isBooked(day) ? 'bg-red font-medium' : ''}
+                        ${isToday && !isSelected(day) ? 'border border-purple font-bold' : ''}
+                        ${isStart || isEnd || isInRange ? 'bg-purple text-white' : ''}
                         rounded-md
                       `}
                     >
@@ -252,16 +252,16 @@ const BookItem = () => {
         
         <div className="mt-4 flex items-center space-x-4">
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-red-100 mr-2 rounded-md"></div>
+            <div className="w-4 h-4 bg-red mr-2 rounded-md"></div>
             <span className="text-xs text-gray-600">Booked</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 bg-purple-500 mr-2 rounded-md"></div>
+            <div className="w-4 h-4 bg-purple mr-2 rounded-md"></div>
             <span className="text-xs text-gray-600">Selected</span>
           </div>
           <div className="flex items-center">
-            <div className="w-4 h-4 border border-purple-500 bg-white mr-2 rounded-md"></div>
-            <span className="text-xs text-gray-600">Today</span>
+            <div className="w-4 h-4 border border-purple bg-white mr-2 rounded-md"></div>
+            <span className="text-xs text-gray">Today</span>
           </div>
         </div>
       </div>
@@ -512,7 +512,7 @@ const EsewaPaymentButton = () => {
               id="modalAcceptTerms"
               checked={acceptedTerms}
               onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+              className="h-4 w-4 text-purple-600 focus:ring-purple border-gray-300 rounded"
             />
             <label htmlFor="modalAcceptTerms" className="ml-2 block text-sm text-gray-700">
               I accept these terms and conditions
@@ -522,7 +522,7 @@ const EsewaPaymentButton = () => {
           <div className="mt-6 flex justify-end">
             <button
               onClick={() => setShowTermsModal(false)}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700"
+              className="px-4 py-2 bg-purple text-white rounded-md text-sm font-medium hover:bg-purple-700"
             >
               Close
             </button>
@@ -535,7 +535,7 @@ const EsewaPaymentButton = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple"></div>
       </div>
     );
   }
@@ -543,7 +543,7 @@ const EsewaPaymentButton = () => {
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-red-500 text-xl">{error}</div>
+        <div className="text-red text-xl">{error}</div>
       </div>
     );
   }
@@ -571,7 +571,7 @@ const EsewaPaymentButton = () => {
           <div className="flex flex-col lg:flex-row gap-12">
             {/* Calendar Section */}
             <div className="w-full lg:w-1/2">
-              <div className="bg-white border border-purple-200 p-6 rounded-3xl shadow-md">
+              <div className="bg-white border border-purple p-6 rounded-3xl shadow-md">
                 <h2 className="text-xl font-semibold mb-4">Select Dates</h2>
                 <CustomCalendar 
                   dateRange={dateRange} 
@@ -582,7 +582,7 @@ const EsewaPaymentButton = () => {
             
             {/* Booking Summary */}
             <div className="w-full lg:w-1/2">
-              <div className="bg-white p-6 rounded-3xl shadow-md border border-purple-200">
+              <div className="bg-white p-6 rounded-3xl shadow-md border border-purple">
                 <h2 className="text-xl font-semibold mb-6">Booking Summary</h2>
                 
                 <div className="space-y-4 mb-6">
@@ -619,7 +619,7 @@ const EsewaPaymentButton = () => {
                   <div className="border-t pt-4">
                     <div className="flex justify-between font-semibold text-lg">
                       <span>Initial Payment (10%):</span>
-                      <span className="text-purple-600">
+                      <span className="text-purple">
                         {startDate && endDate ? `NPR ${bookingPayment}` : "-"}
                       </span>
                     </div>
@@ -642,7 +642,7 @@ const EsewaPaymentButton = () => {
                         setAcceptedTerms(false);
                       }
                     }}
-                    className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-purple-600 focus:ring-purple border-gray-300 rounded"
                   />
                   <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-700">
                     I accept all terms and conditions
@@ -676,8 +676,8 @@ const EsewaPaymentButton = () => {
                       disabled={submitting || !startDate || !endDate || !acceptedTerms}
                       className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
                         submitting || !startDate || !endDate || !acceptedTerms
-                          ? "bg-purple-300 cursor-not-allowed"
-                          : "bg-purple-600 hover:bg-purple-700"
+                          ? "bg-purple cursor-not-allowed"
+                          : "bg-purple hover:bg-purplehover"
                       }`}
                     >
                       {submitting ? "Processing..." : "Pay 10% to Book Now"}
@@ -689,7 +689,7 @@ const EsewaPaymentButton = () => {
                 
                 <button
                   onClick={() => navigate(-1)}
-                  className="w-full mt-4 py-3 px-4 rounded-lg border border-purple-600 text-purple-600 font-medium hover:bg-purple-50 transition-colors"
+                  className="w-full mt-4 py-3 px-4 rounded-lg border border-purple text-purple-600 font-medium hover:bg-purple-50 transition-colors"
                 >
                   Back to Item
                 </button>

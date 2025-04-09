@@ -138,10 +138,16 @@ const AddRentItem = () => {
               <option disabled value="default">
                 Select a category
               </option>
-              <option value="electronics">Electronics</option>
-              <option value="furniture">Furniture</option>
-              <option value="vehicles">Vehicles</option>
-              <option value="appliances">Appliances</option>
+              <option value="electronics">Electronics & Gadgets</option>
+              <option value="house">Home & Lifestyle</option>
+              <option value="vehicles">Vehicles & Transportation</option>
+              <option value="clothes">Fashion & Accessories</option>
+              <option value="sports">Sports & Outdoor Gear</option>
+              <option value="baby">Baby & Kids Items</option>
+              <option value="musical">Musical Instruments</option>
+              <option value="equipment">Office & Business Equipment</option>
+              <option value="books">Books</option>
+              <option value="others">Others</option>
             </select>
           </div>
 

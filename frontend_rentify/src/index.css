@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.heartStar{
+    border-radius: 0px 28px 0px 28px;
+  }

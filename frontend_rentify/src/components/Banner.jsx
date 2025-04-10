@@ -58,7 +58,7 @@ const Banner = () => {
           <p className="text-[#4A4A4A] text-xl">
             Experience the convenience of renting everything you need, right at your doorstep. From electronics to furniture, we offer a wide range of high-quality products to match your lifestyle. Browse, select, and enjoy the flexibility of renting – all with unmatched ease and affordability. Whether it's short-term or long-term, find the perfect rental for every occasion.
           </p>
-          <Link to="/">
+          <Link to="/rent">
             <button className="bg-purple text-white font-semibold px-8 py-3 rounded-full mt-6">
               Rent Now
             </button>

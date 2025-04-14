@@ -4,49 +4,58 @@ const User = require("../models/User");
 
 // Create or get conversation
 const getOrCreateConversation = async (req, res) => {
-  try {
-    const { participant1, participant2 } = req.body;
-    
-    // Check if participants are the same
-    if (participant1 === participant2) {
-      return res.status(400).json({ message: "Cannot create conversation with yourself" });
-    }
-
-    // Check if conversation already exists
-    let conversation = await Conversation.findOne({
-      participants: { $all: [participant1, participant2] }
-    });
-
-    // If not, create a new one
-    if (!conversation) {
-      conversation = new Conversation({
-        participants: [participant1, participant2],
-        lastMessage: null,
-        updatedAt: new Date()
-      });
-      await conversation.save();
-    }
-
-    // Get participant details
-    const participants = await User.find({
-      email: { $in: [participant1, participant2] }
-    }, 'name email photoURL');
-
-    const participant1Info = participants.find(p => p.email === participant1);
-    const participant2Info = participants.find(p => p.email === participant2);
-
-    res.status(200).json({
-      conversationId: conversation._id,
-      participants: {
-        [participant1]: participant1Info,
-        [participant2]: participant2Info
+    try {
+      const { participant1, participant2 } = req.body;
+      
+      // Check if participants are the same
+      if (participant1 === participant2) {
+        return res.status(400).json({ message: "Cannot create conversation with yourself" });
       }
-    });
-  } catch (error) {
-    console.error("Error in getOrCreateConversation:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
+  
+      // Check if conversation already exists
+      let conversation = await Conversation.findOne({
+        participants: { $all: [participant1, participant2] }
+      }).populate('lastMessage');
+  
+      // If not, create a new one
+      if (!conversation) {
+        conversation = new Conversation({
+          participants: [participant1, participant2],
+          lastMessage: null,
+          updatedAt: new Date()
+        });
+        await conversation.save();
+      }
+  
+      // Get participant details
+      const participants = await User.find({
+        email: { $in: [participant1, participant2] }
+      }, 'name email photoURL');
+  
+      const participant1Info = participants.find(p => p.email === participant1) || {
+        email: participant1,
+        name: participant1.split('@')[0],
+        photoURL: ''
+      };
+  
+      const participant2Info = participants.find(p => p.email === participant2) || {
+        email: participant2,
+        name: participant2.split('@')[0],
+        photoURL: ''
+      };
+  
+      res.status(200).json({
+        conversationId: conversation._id,
+        participants: {
+          [participant1]: participant1Info,
+          [participant2]: participant2Info
+        }
+      });
+    } catch (error) {
+      console.error("Error in getOrCreateConversation:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  };
 
 // Send a message
 const sendMessage = async (req, res) => {

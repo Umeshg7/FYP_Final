@@ -26,6 +26,8 @@ import AdminBookings from "../pages/dashboard/admin/AdminBookings";
 import UserBooking from "../pages/dashboard/user/UserBooking";
 import PaymentSuccess from "../components/Payment/PaymentSuccess"
 import Paymentfailure from "../components/Payment/PaymentFailure"
+import ConversationsList from "../components/Chat/ConversationsList";
+import ChatPage from "../components/Chat/chatPage";
 
 const router = createBrowserRouter([
   {
@@ -52,9 +54,6 @@ const router = createBrowserRouter([
         path: "/item/:id", // This is the dynamic route for item details
         element: <ItemDetails />, // Add the component here
       },
-      {
-        path: "/chat/",
-      },
     ],
   },
   {
@@ -78,6 +77,17 @@ const router = createBrowserRouter([
   {
     path : "kycverify",
     element : <KYCForm/>
+  },
+
+
+  //chat routes 
+  {
+    path: "/chat",
+    element: <ConversationsList/>,
+  },
+  {
+    path : "/chat/:conversationId",
+    element : <ChatPage/>
   },
 
 

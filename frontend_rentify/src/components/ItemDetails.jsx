@@ -39,43 +39,43 @@ const ItemDetails = () => {
     e.stopPropagation();
     
     if (!user) {
+      Swal.fire({
+        icon: "warning",
+        title: "Login Required",
+        text: "Please login to start chatting",
+      });
+      return;
+    }
+  
+    try {
+      if (!ownerInfo?.email) {
+        throw new Error("Owner information not available");
+      }
+  
+      if (ownerInfo.email === user.email) {
         Swal.fire({
-            icon: "warning",
-            title: "Login Required",
-            text: "Please login to start chatting",
+          icon: "error",
+          title: "Can't chat with yourself",
+          text: "You can't start a chat with yourself",
         });
         return;
-    }
-
-    try {
-        if (!ownerInfo?.email) {
-            throw new Error("Owner information not available");
-        }
-
-        if (ownerInfo.email === user.email) {
-            Swal.fire({
-                icon: "error",
-                title: "Can't chat with yourself",
-                text: "You can't start a chat with yourself",
-            });
-            return;
-        }
-
-        const response = await axiosSecure.post("/messages/conversations", {
-            participant1: user.email,
-            participant2: ownerInfo.email,
-            participant1Id: user.uid,
-            participant2Id: product.userId
-        });
-
-        navigate(`/chat`);
+      }
+  
+      // Create or get conversation
+      const response = await axiosSecure.post("/messages/conversations", {
+        participant1: user.email,
+        participant2: ownerInfo.email
+      });
+  
+      // Navigate to the chat page
+      navigate(`/chat/${response.data.conversationId}`);
     } catch (error) {
-        console.error("Error starting chat:", error);
-        Swal.fire({
-            icon: "error",
-            title: "Chat Error",
-            text: "An error occurred while starting the chat",
-        });
+      console.error("Error starting chat:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Chat Error",
+        text: error.response?.data?.message || "An error occurred while starting the chat",
+      });
     }
   };
 

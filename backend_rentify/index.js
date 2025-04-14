@@ -61,11 +61,14 @@ const rentRoutes = require("./api/routes/RentRoutes");
 const userRoutes = require("./api/routes/userRoutes");
 const kycRoutes = require("./api/routes/KYCRoutes");
 const bookingRoutes = require("./api/routes/bookingRoutes");
+const messageRoutes = require("./api/routes/messageRoutes")
 // Use Routes
 app.use("/rent", rentRoutes);
 app.use("/users", userRoutes);
 app.use("/kyc", kycRoutes);
 app.use("/bookings", bookingRoutes);
+app.use("/messages", messageRoutes);
+
 // Root Route
 app.get("/", (req, res) => res.send("🚀 RentifyHub Backend is Running!"));
 

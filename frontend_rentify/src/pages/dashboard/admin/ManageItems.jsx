@@ -113,7 +113,7 @@ const ManageItems = () => {
                   </div>
                 </td>
                 <td>{item.title}</td>
-                <td>${item.pricePerDay}</td>
+                <td>NPR : {item.pricePerDay}</td>
                 <td>
                   <button
                     onClick={() => handleDeleteItem(item)}

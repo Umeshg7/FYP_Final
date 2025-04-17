@@ -403,6 +403,7 @@ const BookItem = () => {
     try {
       setSubmitting(true);
       
+      // First create the booking record in your database
       const bookingId = await createBooking();
       setCurrentBookingId(bookingId);
       
@@ -410,8 +411,8 @@ const BookItem = () => {
       const totalPrice = totalDays * item.pricePerDay;
       const bookingPayment = Math.round(totalPrice * 0.1);
 
-      const secretKey = "8gBm/:&EnhH.1/q";
-      const transactionUUID = `txn_${Date.now()}_${bookingId}`;
+      const secretKey = "8gBm/:&EnhH.1/q"; // Replace with your actual key
+      const transactionUUID = `txn_${Date.now()}_${bookingId}`; // Include bookingId in transaction ID
       const totalAmount = bookingPayment;
       const productCode = "EPAYTEST";
       const signedFieldNames = "total_amount,transaction_uuid,product_code";

@@ -49,17 +49,17 @@ const UserBookings = () => {
   );
 
   // Calculate financial summaries
-  const calculateTotals = () => {
-    const earnings = lendingBookings
-      .filter(booking => booking.status === "completed")
-      .reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
-    
-    const spent = rentingBookings
-      .filter(booking => ["completed", "confirmed", "active"].includes(booking.status))
-      .reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
-    
-    return { earnings, spent };
-  };
+const calculateTotals = () => {
+  const earnings = lendingBookings
+    .filter(booking => booking.status === "completed")
+    .reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
+  
+  const spent = rentingBookings
+    .filter(booking => booking.status === "completed")
+    .reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
+  
+  return { earnings, spent };
+};
 
   const { earnings, spent } = calculateTotals();
 

@@ -186,7 +186,7 @@ const AdminBookings = () => {
                     </span>
                   </div>
                 </td>
-                <td>${booking.totalPrice?.toFixed(2) || '0.00'}</td>
+                <td>NPR : {booking.totalPrice?.toFixed(2) || '0.00'}</td>
                 <td>
                   <div className="flex gap-2">
                     <select

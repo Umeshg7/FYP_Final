@@ -102,7 +102,7 @@ const Manageuseritems = () => {
                 </td>
                 <td>{item.title}</td>
                 <td>{item.category || "N/A"}</td>
-                <td>${item.pricePerDay}</td>
+                <td>NPR : {item.pricePerDay}</td>
                 <td>
                   <button
                     onClick={(e) => handleDeleteItem(item, e)}

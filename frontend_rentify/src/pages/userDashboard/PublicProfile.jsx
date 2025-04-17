@@ -194,18 +194,22 @@ const PublicProfile = () => {
                   </div>
                   <span>Call Now</span>
                 </button>
+                <Link to ="/chat">
                 <button
                   className="flex items-center gap-2 bg-white text-purple px-4 py-2 rounded-full border-2 border-purple shadow-md hover:shadow-lg transition-all"
                   style={{
                     boxShadow: "2px 2px 5px rgba(0,0,0,0.1)",
                     borderRadius: "2rem 2rem 2rem 0"
                   }}
+                  
                 >
+                
                   <div className="bg-white text-purple p-1 rounded-full">
                     <FaComment />
                   </div>
                   <span>Chat Now</span>
                 </button>
+                </Link>
                 </div>
               </div>
             </div>

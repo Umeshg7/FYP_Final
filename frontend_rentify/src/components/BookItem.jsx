@@ -248,7 +248,7 @@ const BookItem = () => {
                       onClick={() => handleDateClick(day)}
                       className={`
                         text-center py-2 text-sm
-                        ${isDisabled ? 'text-gray-400' : 'text-gray-800 cursor-pointer'}
+                        ${isDisabled ? 'text-white' : 'text-gray-800 cursor-pointer'}
                         ${isBooked(day) ? 'bg-red font-medium' : ''}
                         ${isToday && !isSelected(day) ? 'border border-purple font-bold' : ''}
                         ${isStart || isEnd || isInRange ? 'bg-purple text-white' : ''}

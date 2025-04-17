@@ -34,7 +34,6 @@ const BookItem = () => {
   const [submitting, setSubmitting] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('card');
   const [currentBookingId, setCurrentBookingId] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -47,7 +46,6 @@ const BookItem = () => {
         const itemRes = await axiosSecure.get(`/rent/item/${itemId}`);
         setItem(itemRes.data);
         
-        // Fetch owner info
         if (itemRes.data?.userId) {
           try {
             const ownerResponse = await axiosSecure.get(`/users/${itemRes.data.userId}`);
@@ -86,7 +84,6 @@ const BookItem = () => {
     fetchData();
   }, [itemId, axiosSecure]);
 
-  // Handle Esewa payment callback
   useEffect(() => {
     const handleEsewaCallback = async () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -97,7 +94,6 @@ const BookItem = () => {
         try {
           setSubmitting(true);
           
-          // Verify payment with backend and update booking status
           const verification = await axiosSecure.patch(`/bookings/${bookingId}/verify-payment`, {
             paymentMethod: 'esewa',
             paymentStatus: 'paid',
@@ -125,17 +121,14 @@ const BookItem = () => {
           });
         } finally {
           setSubmitting(false);
-          // Clean up the URL parameters
           window.history.replaceState({}, document.title, window.location.pathname);
         }
       } else if (paymentStatus === 'failed' && bookingId) {
-        // Handle failed payment
         Swal.fire({
           icon: "error",
           title: "Payment Failed",
           text: "Your payment was not successful. Please try again.",
         });
-        // Optionally delete the pending booking record
         try {
           await axiosSecure.delete(`/bookings/${bookingId}`);
         } catch (err) {
@@ -303,7 +296,7 @@ const BookItem = () => {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         totalPrice,
-        paymentMethod,
+        paymentMethod: 'esewa',
         acceptedTerms: true,
         status: "pending",
         paymentStatus: "pending"
@@ -357,7 +350,6 @@ const BookItem = () => {
       return;
     }
   
-    // Check date availability
     const isRangeAvailable = !bookings.some(booking => {
       if (["cancelled", "rejected"].includes(booking.status)) return false;
       if (booking.item._id !== itemId) return false;
@@ -382,27 +374,8 @@ const BookItem = () => {
   
     try {
       setSubmitting(true);
-      
-      if (paymentMethod === 'card') {
-        // For card payments, we handle everything at once
-        const bookingId = await createBooking();
-        const totalDays = differenceInDays(endDate, startDate) + 1;
-        const totalPrice = totalDays * item.pricePerDay;
-        const bookingPayment = Math.round(totalPrice * 0.1);
-
-        Swal.fire({
-          icon: "success",
-          title: "Booking Request Sent!",
-          text: `A 10% payment of NPR ${bookingPayment} is required to secure your booking`,
-          showConfirmButton: false,
-          timer: 2000
-        });
-        navigate("/user-dashboard/rented");
-      } else if (paymentMethod === 'esewa') {
-        // For Esewa, we create the booking first and store its ID
-        const bookingId = await createBooking();
-        setCurrentBookingId(bookingId);
-      }
+      const bookingId = await createBooking();
+      setCurrentBookingId(bookingId);
       
     } catch (err) {
       console.error("Booking error:", err.response?.data || err.message);
@@ -424,82 +397,65 @@ const BookItem = () => {
     }
   };
 
-  const EsewaPaymentButton = () => {
-    const initiateEsewaPayment = async () => {
-      if (!startDate || !endDate || !acceptedTerms) return;
+  const initiateEsewaPayment = async () => {
+    if (!startDate || !endDate || !acceptedTerms) return;
+    
+    try {
+      setSubmitting(true);
       
-      try {
-        setSubmitting(true);
-        
-        // First create the booking record in your database
-        const bookingId = await createBooking();
-        setCurrentBookingId(bookingId);
-        
-        const totalDays = differenceInDays(endDate, startDate) + 1;
-        const totalPrice = totalDays * item.pricePerDay;
-        const bookingPayment = Math.round(totalPrice * 0.1);
+      const bookingId = await createBooking();
+      setCurrentBookingId(bookingId);
+      
+      const totalDays = differenceInDays(endDate, startDate) + 1;
+      const totalPrice = totalDays * item.pricePerDay;
+      const bookingPayment = Math.round(totalPrice * 0.1);
 
-        const secretKey = "8gBm/:&EnhH.1/q"; // Replace with your actual key
-        const transactionUUID = `txn_${Date.now()}_${bookingId}`; // Include bookingId in transaction ID
-        const totalAmount = bookingPayment;
-        const productCode = "EPAYTEST";
-        const signedFieldNames = "total_amount,transaction_uuid,product_code";
+      const secretKey = "8gBm/:&EnhH.1/q";
+      const transactionUUID = `txn_${Date.now()}_${bookingId}`;
+      const totalAmount = bookingPayment;
+      const productCode = "EPAYTEST";
+      const signedFieldNames = "total_amount,transaction_uuid,product_code";
 
-        const signatureBase = `total_amount=${totalAmount},transaction_uuid=${transactionUUID},product_code=${productCode}`;
-        const signature = CryptoJS.HmacSHA256(signatureBase, secretKey).toString(CryptoJS.enc.Base64);
+      const signatureBase = `total_amount=${totalAmount},transaction_uuid=${transactionUUID},product_code=${productCode}`;
+      const signature = CryptoJS.HmacSHA256(signatureBase, secretKey).toString(CryptoJS.enc.Base64);
 
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
 
-        const formData = {
-          amount: totalAmount,
-          tax_amount: 0,
-          total_amount: totalAmount,
-          transaction_uuid: transactionUUID,
-          product_code: productCode,
-          product_service_charge: 0,
-          product_delivery_charge: 0,
-          success_url: `http://localhost:5173/payment/success`,
-          failure_url: `http://localhost:5173/payment/failure`,
-          signed_field_names: signedFieldNames,
-          signature: signature,
-        };
+      const formData = {
+        amount: totalAmount,
+        tax_amount: 0,
+        total_amount: totalAmount,
+        transaction_uuid: transactionUUID,
+        product_code: productCode,
+        product_service_charge: 0,
+        product_delivery_charge: 0,
+        success_url: `http://localhost:5173/payment/success`,
+        failure_url: `http://localhost:5173/payment/failure`,
+        signed_field_names: signedFieldNames,
+        signature: signature,
+      };
 
-        Object.entries(formData).forEach(([key, value]) => {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = key;
-          input.value = String(value);
-          form.appendChild(input);
-        });
+      Object.entries(formData).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value);
+        form.appendChild(input);
+      });
 
-        document.body.appendChild(form);
-        form.submit();
-      } catch (err) {
-        console.error("Esewa initiation error:", err);
-        Swal.fire({
-          icon: "error",
-          title: "Payment Error",
-          text: "Failed to initiate payment",
-        });
-        setSubmitting(false);
-      }
-    };
-
-    return (
-      <button 
-        onClick={initiateEsewaPayment}
-        disabled={submitting || !startDate || !endDate || !acceptedTerms}
-        className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
-          submitting || !startDate || !endDate || !acceptedTerms
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-[#55D046] hover:bg-[#4bb53d]"
-        }`}
-      >
-        {submitting ? "Processing..." : "Pay with eSewa"}
-      </button>
-    );
+      document.body.appendChild(form);
+      form.submit();
+    } catch (err) {
+      console.error("Esewa initiation error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Payment Error",
+        text: "Failed to initiate payment",
+      });
+      setSubmitting(false);
+    }
   };
 
   const TermsModal = () => {
@@ -575,7 +531,7 @@ const BookItem = () => {
   };
 
   const getImageUrl = (url) => {
-    if (!url) return "https://via.placeholder.com/400";
+    if (!url) return "";
     if (url.startsWith("http://")) url = url.replace("http://", "https://");
     if (!url.startsWith("http")) url = `https://${url}`;
     return url;
@@ -686,13 +642,13 @@ const BookItem = () => {
                       src={
                         item.images?.length > 0
                           ? getImageUrl(item.images[currentImageIndex])
-                          : "https://via.placeholder.com/400"
+                          : ""
                       }
                       alt={item.title}
                       className="max-h-full max-w-full object-contain p-4"
                       onClick={() => item.images?.length > 0 && handleImageClick(item.images[currentImageIndex])}
                       onError={(e) => {
-                        e.target.src = "https://via.placeholder.com/400";
+                        e.target.src = "";
                       }}
                     />
                   </div>
@@ -758,9 +714,6 @@ const BookItem = () => {
                         src={getImageUrl(displayOwnerInfo.photoURL)}
                         alt={displayOwnerInfo.name}
                         className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-purple"
-                        onError={(e) => {
-                          e.target.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(displayOwnerInfo.name) + "&background=random";
-                        }}
                       />
                       <div>
                         <p className="text-lg font-semibold flex items-center">
@@ -857,42 +810,19 @@ const BookItem = () => {
                   </label>
                 </div>
 
-                {/* Payment Method Selection */}
-                <div className="mt-6 space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <button
-                      onClick={() => setPaymentMethod('card')}
-                      className={`px-4 py-2 rounded-lg border ${
-                        paymentMethod === 'card' ? 'border-purple bg-purple-50 text-purple' : 'border-gray-300'
-                      }`}
-                    >
-                      Credit/Debit Card
-                    </button>
-                    <button
-                      onClick={() => setPaymentMethod('esewa')}
-                      className={`px-4 py-2 rounded-lg border ${
-                        paymentMethod === 'esewa' ? 'border-[#55D046] bg-[#f0f9ef] text-[#55D046]' : 'border-gray-300'
-                      }`}
-                    >
-                      eSewa
-                    </button>
-                  </div>
-
-                  {paymentMethod === 'card' ? (
-                    <button
-                      onClick={handleSubmitBooking}
-                      disabled={submitting || !startDate || !endDate || !acceptedTerms}
-                      className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
-                        submitting || !startDate || !endDate || !acceptedTerms
-                          ? "bg-purple cursor-not-allowed"
-                          : "bg-purple hover:bg-purple-700"
-                      }`}
-                    >
-                      {submitting ? "Processing..." : "Pay 10% to Book Now"}
-                    </button>
-                  ) : (
-                    <EsewaPaymentButton />
-                  )}
+                {/* Payment Button */}
+                <div className="mt-6">
+                  <button 
+                    onClick={initiateEsewaPayment}
+                    disabled={submitting || !startDate || !endDate || !acceptedTerms}
+                    className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
+                      submitting || !startDate || !endDate || !acceptedTerms
+                        ? "bg-[#55D046] cursor-not-allowed opacity-70"
+                        : "bg-[#55D046] hover:bg-[#4bb53d]"
+                    }`}
+                  >
+                    {submitting ? "Processing..." : "Pay with eSewa"}
+                  </button>
                 </div>
               </div>
             </div>

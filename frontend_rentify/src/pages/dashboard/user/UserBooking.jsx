@@ -510,14 +510,14 @@ const calculateTotals = () => {
         <div className="stats shadow bg-green-50">
           <div className="stat">
             <div className="stat-title">Earnings (as Lender)</div>
-            <div className="stat-value">${earnings.toFixed(2)}</div>
+            <div className="stat-value">NPR : {earnings.toFixed(2)}</div>
           </div>
         </div>
         
         <div className="stats shadow bg-blue-50">
           <div className="stat">
             <div className="stat-title">Spent (as Renter)</div>
-            <div className="stat-value">${spent.toFixed(2)}</div>
+            <div className="stat-value">NPR : {spent.toFixed(2)}</div>
           </div>
         </div>
       </div>

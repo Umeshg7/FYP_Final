@@ -195,7 +195,7 @@ const calculateTotals = () => {
         {role === "lender" ? "Items You're Lending" : "Items You're Renting"}
       </h2>
       <table className="table w-full">
-        <thead className="bg-blue-600 text-white">
+        <thead className="bg-purple text-white">
           <tr>
             <th>Item</th>
             <th>{role === "lender" ? "Renter" : "Lender"}</th>

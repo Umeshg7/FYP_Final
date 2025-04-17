@@ -93,7 +93,7 @@ const ManageItems = () => {
       <div className="overflow-x-auto">
         <table className="table">
           <thead>
-            <tr>
+            <tr className=" bg-purple text-white">
               <th>#</th>
               <th>Image</th>
               <th>Item Name</th>

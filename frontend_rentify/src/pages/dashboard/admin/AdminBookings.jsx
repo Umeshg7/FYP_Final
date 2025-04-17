@@ -127,7 +127,7 @@ const AdminBookings = () => {
 
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="table w-full">
-          <thead className="bg-blue-600 text-white">
+          <thead className="bg-purple text-white">
             <tr>
               <th>#</th>
               <th>Item</th>

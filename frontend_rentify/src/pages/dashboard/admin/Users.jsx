@@ -19,6 +19,7 @@ const Users = () => {
 
   // Safely extract users array from response
   const users = usersData.data || usersData.users || [];
+  console.log(users)
   
   if (isLoading) {
     return <div className="text-center py-8">Loading users...</div>;
@@ -86,6 +87,8 @@ const Users = () => {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Action</th>
+                <th>Kyc Status</th>
+
               </tr>
             </thead>
             <tbody>
@@ -118,6 +121,11 @@ const Users = () => {
                     <button onClick={() => handleDeleteUser(user)} className="btn btn-xs bg-orange-500 text-white">
                       <FaTrashAlt />
                     </button>
+                  </td>
+                  <td>
+                  
+                    {user.kycVerified ? "Verified" : "Not Verified"}
+
                   </td>
                 </tr>
               ))}

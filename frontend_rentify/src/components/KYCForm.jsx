@@ -184,8 +184,6 @@ const KYCForm = () => {
           }
         });
       }
-      console.log("send to frontend",submissionData )
-
     } catch (error) {
       setError(error.response?.data?.message || "Submission failed. Please try again.");
     } finally {

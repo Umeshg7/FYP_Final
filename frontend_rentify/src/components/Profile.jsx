@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom';
 import useAdmin from '../hooks/useAdmin';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { CgProfile } from "react-icons/cg";
+import { CgProfile, } from "react-icons/cg";
+import { BsChatLeftTextFill } from "react-icons/bs";
+
 import { IoSettingsSharp } from "react-icons/io5";
 import { GrDocumentUpdate } from "react-icons/gr";
 import { IoDocumentText } from "react-icons/io5";
@@ -165,8 +167,12 @@ const Profile = ({ user }) => {
               </Link>
             </li>
           )}
+          <li>
+            <Link to = "/chat">
+            <BsChatLeftTextFill/>Chat</Link>
+          </li>
           
-          <li><a onClick={handleLogout}><IoLogOut size={20}/>Logout</a></li>
+          <li><a onClick={handleLogout}><IoLogOut size={20}/>Logouttt</a></li>
         </ul>
       </div>
     </div>

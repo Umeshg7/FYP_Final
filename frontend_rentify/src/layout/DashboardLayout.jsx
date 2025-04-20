@@ -10,6 +10,9 @@ import {
   FaShoppingBag,
   FaUser,
 } from "react-icons/fa";
+
+import { BsChatLeftDotsFill } from "react-icons/bs";
+
 import { FaCartShopping } from "react-icons/fa6";
 
 import logo from "/logo.png";
@@ -37,6 +40,11 @@ const sharedLinks = (
     <li>
       <Link to="/menu">
         <FaQuestionCircle /> Customer Support
+      </Link>
+    </li>
+    <li>
+      <Link to ="/chat">
+      <BsChatLeftDotsFill/>Chat
       </Link>
     </li>
   </>

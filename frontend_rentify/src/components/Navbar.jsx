@@ -35,6 +35,9 @@ const Navbar = () => {
       <li>
         <a className="text-xl font-semibold py-3 px-6" href="/">Home</a>
       </li>
+      <li>
+        <a className="text-xl font-semibold py-3 px-6 " href="/itemmap"> View Nearby Items</a>
+      </li>
       <li tabIndex={0}>
         <details>
           <summary className="text-xl font-semibold py-3 px-6">For Rent</summary>
@@ -47,18 +50,7 @@ const Navbar = () => {
           </ul>
         </details>
       </li>
-      <li tabIndex={0}>
-        <details>
-          <summary className="text-xl font-semibold py-3 px-6">Our Services</summary>
-          <ul className="p-2">
-            <li><a className="py-2 px-4">Online Booking</a></li>
-            <li><a className="py-2 px-4">Vehicles</a></li>
-            <li><a className="py-2 px-4">Electronics</a></li>
-            <li><a className="py-2 px-4">Clothes</a></li>
-            <li><a className="py-2 px-4">Camping equipment</a></li>
-          </ul>
-        </details>
-      </li>
+
       <li>
         <a className="text-xl font-semibold py-3 px-6">About Us</a>
       </li>

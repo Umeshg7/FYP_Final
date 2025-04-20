@@ -28,6 +28,7 @@ import PaymentSuccess from "../components/Payment/PaymentSuccess"
 import Paymentfailure from "../components/Payment/PaymentFailure"
 import ConversationsList from "../components/Chat/ConversationsList";
 import ChatPage from "../components/Chat/chatPage";
+import ItemsMap from "../components/ItemsMap";
 
 const router = createBrowserRouter([
   {
@@ -70,6 +71,9 @@ const router = createBrowserRouter([
     element: <Login />,
   },
   
+  {
+    path: "/itemmap",
+    element: <ItemsMap/>  },
   {
     path: "/signup",
     element: <Signup />,

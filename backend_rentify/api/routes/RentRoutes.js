@@ -25,4 +25,7 @@ router.delete("/reject/:id", rentController.rejectRentItem);
 // Delete a rent item
 router.delete("/:id", rentController.deleteRentItem);
 
+router.get("/nearby", rentController.getRentItemsNearby);
+
+
 module.exports = router;

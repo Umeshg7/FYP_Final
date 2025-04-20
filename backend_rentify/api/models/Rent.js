@@ -5,12 +5,27 @@ const RentSchema = new mongoose.Schema({
   description: { type: String, required: true },
   category: { type: String, required: true },
   pricePerDay: { type: Number, required: true },
-  location: { type: String, required: true },
+  location: {  // GeoJSON format
+    type: {
+      type: String,
+      default: "Point",
+      enum: ["Point"],
+      required: true
+    },
+    coordinates: {
+      type: [Number],  // [longitude, latitude]
+      required: true
+    },
+    address: { type: String }  // Human-readable address (optional)
+  },
   images: [{ type: String }],
   userEmail: { type: String, required: true },
-  userId: { type: String, required: true },       // Added user ID
-  userName: { type: String, required: true },     // Added user name
-  adminVerified: { type: Boolean, default: true },
+  userId: { type: String, required: true },
+  userName: { type: String, required: true },
+  adminVerified: { type: Boolean, default: false }  // Default to false for admin approval
 }, { timestamps: true });
+
+// Geospatial index for proximity searches
+RentSchema.index({ location: "2dsphere" });
 
 module.exports = mongoose.model("Rent", RentSchema);

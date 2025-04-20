@@ -74,23 +74,53 @@ const deleteRentItem = async (req, res) => {
   }
 };
 
-// Post a new rent item (Initially Unverified)
 const postRentItem = async (req, res) => {
   try {
-    console.log("Received Request Body:", req.body);
+    const { longitude, latitude, address, ...rest } = req.body;
 
-    if (!req.body.userEmail) {
-      return res.status(400).json({ message: "User email is required." });
+    if (!longitude || !latitude) {
+      console.error("Missing longitude or latitude:", { longitude, latitude });
+      return res.status(400).json({ message: "Longitude and latitude are required." });
     }
 
-    // Store the rent item in MongoDB
-    const newRentItem = new Rent(req.body); // No images field for now
-    const savedRentItem = await newRentItem.save();
+    const newRentItem = new Rent({
+      ...rest,
+      location: {
+        type: "Point",
+        coordinates: [parseFloat(longitude), parseFloat(latitude)],
+        address: address || ""
+      }
+    });
 
-    res.status(201).json(savedRentItem); // Return the saved rent item
+    const savedRentItem = await newRentItem.save();
+    res.status(201).json(savedRentItem);
   } catch (error) {
     console.error("Error saving rent item:", error);
     res.status(500).json({ message: "Error saving item." });
+  }
+};
+
+
+
+const getRentItemsNearby = async (req, res) => {
+  const { lng, lat, radius = 10000 } = req.query;  // Default 10km radius
+
+  try {
+    const rents = await Rent.find({
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [parseFloat(lng), parseFloat(lat)]
+          },
+          $maxDistance: parseInt(radius)
+        }
+      },
+      adminVerified: true
+    });
+    res.status(200).json(rents);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -168,5 +198,6 @@ module.exports = {
   getRentItemsByUserId,
   rejectRentItem,
   deleteRentItem,
-  getRentItemById
+  getRentItemById,
+  getRentItemsNearby
 };

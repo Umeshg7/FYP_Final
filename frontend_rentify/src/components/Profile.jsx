@@ -4,6 +4,19 @@ import { Link } from 'react-router-dom';
 import useAdmin from '../hooks/useAdmin';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { CgProfile } from "react-icons/cg";
+import { IoSettingsSharp } from "react-icons/io5";
+import { GrDocumentUpdate } from "react-icons/gr";
+import { IoDocumentText } from "react-icons/io5";
+import { MdAdminPanelSettings } from "react-icons/md";
+import { IoLogOut } from "react-icons/io5";
+import { GoUnverified } from "react-icons/go";
+
+
+
+
+
+
 
 const Profile = ({ user }) => {
   const { logOut } = useContext(AuthContext);
@@ -114,7 +127,7 @@ const Profile = ({ user }) => {
       <div className="drawer-side">
         <label htmlFor="my-drawer-4" className="drawer-overlay"></label>
         <ul className="menu p-4 w-80 min-h-full bg-base-200 text-base-content">
-          <li><Link to={`/profile/${user.uid}`}>Profile</Link></li>
+          <li><Link to={`/profile/${user.uid}`}><CgProfile size={20}/>Profile</Link></li>
           
           {/* Show KYC verification link only if not verified */}
           {!kycStatus && !loading && (
@@ -124,17 +137,17 @@ const Profile = ({ user }) => {
           {/* Settings with expandable submenu */}
           <li>
             <details open={showSettings} onToggle={toggleSettings}>
-              <summary>Settings</summary>
+              <summary><IoSettingsSharp size={20}/>Settings</summary>
               <ul>
-                <li><Link to='/updateprofile'>Update Profile</Link></li>
-                <li><Link to='/userdetails'>Your Details</Link></li>
+                <li><Link to='/updateprofile'><GrDocumentUpdate size={20}/>Update Profile</Link></li>
+                <li><Link to='/userdetails'><IoDocumentText size={20}/>Your Details</Link></li>
               </ul>
             </details>
           </li>
           
           {/* Dashboard link with KYC verification check */}
           {isAdmin ? (
-            <li><Link to='/admin-dashboard'>Admin Dashboard</Link></li>
+            <li><Link to='/admin-dashboard'><MdAdminPanelSettings size={20}/>Admin Dashboard</Link></li>
           ) : (
             <li>
               <Link 
@@ -144,7 +157,7 @@ const Profile = ({ user }) => {
               >
                 User Dashboard
                 {!kycStatus && !loading && (
-                  <span className="badge badge-warning ml-2">KYC Required</span>
+                  <span className="badge badge-warning ml-2"><GoUnverified size={20}/>KYC Required</span>
                 )}
                 {loading && (
                   <span className="loading loading-spinner loading-xs ml-2"></span>
@@ -153,7 +166,7 @@ const Profile = ({ user }) => {
             </li>
           )}
           
-          <li><a onClick={handleLogout}>Logout</a></li>
+          <li><a onClick={handleLogout}><IoLogOut size={20}/>Logout</a></li>
         </ul>
       </div>
     </div>

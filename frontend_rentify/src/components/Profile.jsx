@@ -13,6 +13,7 @@ import { IoDocumentText } from "react-icons/io5";
 import { MdAdminPanelSettings } from "react-icons/md";
 import { IoLogOut } from "react-icons/io5";
 import { GoUnverified } from "react-icons/go";
+import { MdDashboard } from "react-icons/md";
 
 
 
@@ -157,7 +158,7 @@ const Profile = ({ user }) => {
                 onClick={handleDashboardClick}
                 className={!kycStatus ? 'text-gray-400 cursor-not-allowed' : ''}
               >
-                User Dashboard
+               <MdDashboard/> User Dashboard
                 {!kycStatus && !loading && (
                   <span className="badge badge-warning ml-2"><GoUnverified size={20}/>KYC Required</span>
                 )}

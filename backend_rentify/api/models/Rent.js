@@ -22,7 +22,7 @@ const RentSchema = new mongoose.Schema({
   userEmail: { type: String, required: true },
   userId: { type: String, required: true },
   userName: { type: String, required: true },
-  adminVerified: { type: Boolean, default: false }  // Default to false for admin approval
+  adminVerified: { type: Boolean, default: true }  // Default to false for admin approval
 }, { timestamps: true });
 
 // Geospatial index for proximity searches

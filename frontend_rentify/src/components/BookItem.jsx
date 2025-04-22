@@ -49,7 +49,12 @@ const BookItem = () => {
         if (itemRes.data?.userId) {
           try {
             const ownerResponse = await axiosSecure.get(`/users/${itemRes.data.userId}`);
-            setOwnerInfo(ownerResponse.data?.data || null);
+            setOwnerInfo(ownerResponse.data?.data || {
+              name: itemRes.data.userName || "Owner",
+              email: itemRes.data.userEmail || "No email provided",
+              kycVerified: false,
+              photoURL: ""
+            });
           } catch (ownerError) {
             console.error("Error fetching owner info:", ownerError);
             setOwnerInfo({
@@ -62,12 +67,14 @@ const BookItem = () => {
         }
         
         const bookingsRes = await axiosSecure.get(`/bookings?itemId=${itemId}`);
-        const processedBookings = bookingsRes.data.bookings.map(booking => ({
-          ...booking,
-          startDate: parseISO(booking.startDate),
-          endDate: parseISO(booking.endDate)
-        }));
-        setBookings(processedBookings || []);
+        const processedBookings = (bookingsRes.data?.bookings || [])
+          .filter(booking => booking?.item?._id)
+          .map(booking => ({
+            ...booking,
+            startDate: parseISO(booking.startDate),
+            endDate: parseISO(booking.endDate)
+          }));
+        setBookings(processedBookings);
         
       } catch (err) {
         setError(err.message);
@@ -162,7 +169,8 @@ const BookItem = () => {
 
     const isBooked = (day) => {
       return bookings.some(booking => {
-        if (["cancelled", "rejected"].includes(booking.status)) return false;
+        if (!booking?.item?._id) return false;
+        if (["cancelled", "rejected"].includes(booking?.status)) return false;
         if (booking.item._id !== itemId) return false;
         
         const bookingStart = new Date(booking.startDate);
@@ -208,7 +216,7 @@ const BookItem = () => {
             onClick={prevMonth}
             className="p-2 rounded hover:bg-gray-100"
           >
-            &lt;
+            <FaArrowLeft />
           </button>
           <h3 className="font-semibold text-lg">
             {format(currentMonth, "MMMM yyyy")}
@@ -217,7 +225,7 @@ const BookItem = () => {
             onClick={nextMonth}
             className="p-2 rounded hover:bg-gray-100"
           >
-            &gt;
+            <FaArrowRight />
           </button>
         </div>
         
@@ -248,7 +256,7 @@ const BookItem = () => {
                       onClick={() => handleDateClick(day)}
                       className={`
                         text-center py-2 text-sm
-                        ${isDisabled ? 'text-white' : 'text-gray-800 cursor-pointer'}
+                        ${isDisabled ? 'text-gray-400' : 'text-gray-800 cursor-pointer'}
                         ${isBooked(day) ? 'bg-red font-medium' : ''}
                         ${isToday && !isSelected(day) ? 'border border-purple font-bold' : ''}
                         ${isStart || isEnd || isInRange ? 'bg-purple text-white' : ''}
@@ -351,7 +359,8 @@ const BookItem = () => {
     }
   
     const isRangeAvailable = !bookings.some(booking => {
-      if (["cancelled", "rejected"].includes(booking.status)) return false;
+      if (!booking?.item?._id) return false;
+      if (["cancelled", "rejected"].includes(booking?.status)) return false;
       if (booking.item._id !== itemId) return false;
       
       const bookingStart = new Date(booking.startDate);
@@ -403,7 +412,6 @@ const BookItem = () => {
     try {
       setSubmitting(true);
       
-      // First create the booking record in your database
       const bookingId = await createBooking();
       setCurrentBookingId(bookingId);
       
@@ -411,8 +419,8 @@ const BookItem = () => {
       const totalPrice = totalDays * item.pricePerDay;
       const bookingPayment = Math.round(totalPrice * 0.1);
 
-      const secretKey = "8gBm/:&EnhH.1/q"; // Replace with your actual key
-      const transactionUUID = `txn_${Date.now()}_${bookingId}`; // Include bookingId in transaction ID
+      const secretKey = "8gBm/:&EnhH.1/q";
+      const transactionUUID = `txn_${Date.now()}_${bookingId}`;
       const totalAmount = bookingPayment;
       const productCode = "EPAYTEST";
       const signedFieldNames = "total_amount,transaction_uuid,product_code";
@@ -499,7 +507,7 @@ const BookItem = () => {
           <div className="mt-6 flex justify-end">
             <button
               onClick={() => setShowTermsModal(false)}
-              className="px-4 py-2 bg-purple text-white rounded-md text-sm font-medium hover:bg-purple-700"
+              className="px-4 py-2 bg-purple text-white rounded-md text-sm font-medium hover:bg-purple"
             >
               Close
             </button>
@@ -593,7 +601,7 @@ const BookItem = () => {
   if (error) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-red-500 text-xl">{error}</div>
+        <div className="text-red text-xl">{error}</div>
       </div>
     );
   }
@@ -643,13 +651,13 @@ const BookItem = () => {
                       src={
                         item.images?.length > 0
                           ? getImageUrl(item.images[currentImageIndex])
-                          : ""
+                          : "https://via.placeholder.com/500"
                       }
                       alt={item.title}
                       className="max-h-full max-w-full object-contain p-4"
                       onClick={() => item.images?.length > 0 && handleImageClick(item.images[currentImageIndex])}
                       onError={(e) => {
-                        e.target.src = "";
+                        e.target.src = "https://via.placeholder.com/500";
                       }}
                     />
                   </div>
@@ -687,14 +695,11 @@ const BookItem = () => {
                 <p className="text-gray-700 mb-6">{item.description}</p>
                 
                 <div className="space-y-4 mb-6">
-                  <div className="flex justify-between">
-                    <span className="text-gray-700">Category:</span>
-                    <span className="font-medium">{item.category}</span>
-                  </div>
+                  
                   
                   <div className="flex justify-between">
                     <span className="text-gray-700">Location:</span>
-                    <span className="font-medium">{item.location}</span>
+                    <span className="font-medium">{item.location?.address || "Location not specified"}</span>
                   </div>
                   
                   <div className="flex justify-between">
@@ -712,7 +717,7 @@ const BookItem = () => {
                       onClick={() => item.userId && navigate(`/profile/${item.userId}`)}
                     >
                       <img
-                        src={getImageUrl(displayOwnerInfo.photoURL)}
+                        src={getImageUrl(displayOwnerInfo.photoURL) || "https://via.placeholder.com/150"}
                         alt={displayOwnerInfo.name}
                         className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-purple"
                       />
@@ -849,7 +854,7 @@ const BookItem = () => {
             <div className="flex justify-center mt-4">
               <button
                 onClick={handleCloseModal}
-                className="px-6 py-2 bg-purple text-white rounded-lg hover:bg-purple-700 transition"
+                className="px-6 py-2 bg-purple text-white rounded-lg hover:bg-purple transition"
               >
                 Close
               </button>

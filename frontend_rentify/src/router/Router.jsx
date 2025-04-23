@@ -29,6 +29,7 @@ import Paymentfailure from "../components/Payment/PaymentFailure"
 import ConversationsList from "../components/Chat/ConversationsList";
 import ChatPage from "../components/Chat/chatPage";
 import ItemsMap from "../components/ItemsMap";
+import Earning from "../pages/dashboard/admin/Earning";
 
 const router = createBrowserRouter([
   {
@@ -139,6 +140,10 @@ const router = createBrowserRouter([
       {
         path: "adminbooking",
         element: <AdminBookings/>,
+      },
+      {
+        path: "earning",
+        element: <Earning/>,
       },
     ],
   },

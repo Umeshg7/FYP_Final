@@ -38,6 +38,11 @@ const sharedLinks = (
       </Link>
     </li>
     <li>
+      <Link to="/admin-dashboard/earning">
+        <FaLocationArrow /> Total User's Earning
+      </Link>
+    </li>
+    <li>
       <Link to="/menu">
         <FaQuestionCircle /> Customer Support
       </Link>

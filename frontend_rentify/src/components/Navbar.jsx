@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import logo from '/logo.png';
-import { FaUser, FaBell } from "react-icons/fa";
+import { FaUser, FaBell, FaSearch, FaTimes } from "react-icons/fa";
 import Modal from "./Modal";
 import { AuthContext } from "../Contexts/AuthProvider";
 import Profile from "./Profile";
@@ -9,15 +9,64 @@ import { useNavigate } from "react-router-dom";
 const Navbar = () => {
   const [isSticky, setSticky] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  // Debounced search for suggestions
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm.trim().length > 2) {
+        fetchSuggestions(searchTerm);
+      } else {
+        setSuggestions([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const fetchSuggestions = async (term) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:6001/rent/search-suggestions?q=${encodeURIComponent(term)}`);
+      if (!response.ok) throw new Error('Failed to fetch suggestions');
+      const data = await response.json();
+      setSuggestions(data);
+      console.log(data)
+    } catch (err) {
+      setError(err.message);
+      setSuggestions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm)}`);
       setSearchTerm("");
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
+  };
+
+  const handleSuggestionClick = (item) => {
+    navigate(`/item/${item._id}`);
+    setSearchTerm("");
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  const clearSearch = () => {
+    setSearchTerm("");
+    setSuggestions([]);
+    setShowSuggestions(false);
   };
 
   useEffect(() => {
@@ -36,23 +85,22 @@ const Navbar = () => {
         <a className="text-xl font-semibold py-3 px-6" href="/">Home</a>
       </li>
       <li>
-        <a className="text-xl font-semibold py-3 px-6 " href="/itemmap"> View Nearby Items</a>
+        <a className="text-xl font-semibold py-3 px-6" href="/itemmap">View Nearby Items</a>
       </li>
       <li tabIndex={0}>
         <details>
           <summary className="text-xl font-semibold py-3 px-6">For Rent</summary>
           <ul className="p-2">
             <li><a className="py-2 px-4" href="/rent">All</a></li>
-            <li><a className="py-2 px-4">Vehicles</a></li>
-            <li><a className="py-2 px-4">Electronics</a></li>
-            <li><a className="py-2 px-4">Clothes</a></li>
-            <li><a className="py-2 px-4">Camping equipment</a></li>
+            <li><a className="py-2 px-4" href="/rent?category=Vehicles">Vehicles</a></li>
+            <li><a className="py-2 px-4" href="/rent?category=Electronics">Electronics</a></li>
+            <li><a className="py-2 px-4" href="/rent?category=Clothes">Clothes</a></li>
+            <li><a className="py-2 px-4" href="/rent?category=Camping Equipment">Camping equipment</a></li>
           </ul>
         </details>
       </li>
-
       <li>
-        <a className="text-xl font-semibold py-3 px-6">About Us</a>
+        <a className="text-xl font-semibold py-3 px-6" href="/about">About Us</a>
       </li>
     </>
   );
@@ -62,7 +110,7 @@ const Navbar = () => {
       <div className="navbar xl:px-16">
         <div className="navbar-start flex items-center space-x-5">
           <a href="/">
-            <img src={logo} alt="rentiifyhub" style={{ width: 'auto', height: '60px' }} />
+            <img src={logo} alt="Rentiify Hub Logo" style={{ width: 'auto', height: '60px' }} />
           </a>
         </div>
 
@@ -71,37 +119,76 @@ const Navbar = () => {
             {navItems}
           </ul>
 
-          <form onSubmit={handleSearch} className="bg-white flex px-4 py-3 border-b border-[#333] focus-within:border-blue-500 overflow-hidden max-w-md mx-auto font-[sans-serif] ml-8">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192.904 192.904" width="18px" className="fill-gray-600 mr-3">
-              <path
-                d="m190.707 180.101-47.078-47.077c11.702-14.072 18.752-32.142 18.752-51.831C162.381 36.423 125.959 0 81.191 0 36.422 0 0 36.423 0 81.193c0 44.767 36.422 81.187 81.191 81.187 19.688 0 37.759-7.049 51.831-18.751l47.079 47.078a7.474 7.474 0 0 0 5.303 2.197 7.498 7.498 0 0 0 5.303-12.803zM15 81.193C15 44.694 44.693 15 81.191 15c36.497 0 66.189 29.694 66.189 66.193 0 36.496-29.692 66.187-66.189 66.187C44.693 147.38 15 117.689 15 81.193z">
-              </path>
-            </svg>
-            <input 
-              type="text" 
-              placeholder="Search item to rent..." 
-              className="w-full outline-none text-sm" 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </form>
+          <div className="relative max-w-md ml-8">
+            <form onSubmit={handleSearch} className="bg-white flex items-center px-4 py-3 border-b border-[#333] focus-within:border-blue-500 overflow-hidden font-[sans-serif]">
+              <FaSearch className="text-gray-600 mr-3" />
+              <input 
+                type="text" 
+                placeholder="Search item to rent..." 
+                className="w-full outline-none text-sm" 
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                aria-label="Search items"
+              />
+              {searchTerm && (
+                <button 
+                  type="button" 
+                  onClick={clearSearch}
+                  className="ml-2 text-gray-500 hover:text-gray-700"
+                  aria-label="Clear search"
+                >
+                  <FaTimes />
+                </button>
+              )}
+            </form>
+
+            {showSuggestions && (suggestions.length > 0 || isLoading) && (
+              <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md max-h-60 overflow-auto">
+                {isLoading ? (
+                  <div className="p-2 text-center text-gray-500">Loading suggestions...</div>
+                ) : error ? (
+                  <div className="p-2 text-center text-red-500">{error}</div>
+                ) : (
+                  <ul>
+                    {suggestions.map((item) => (
+                      <li 
+                        key={item._id}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center"
+                        onClick={() => handleSuggestionClick(item)}
+                      >
+                        <span className="truncate">{item.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="navbar-end flex items-center space-x-5">
           <div tabIndex={0} role="button" className="btn btn-ghost btn-circle mr-5 flex items-center justify-center">
             <div className="indicator">
-              <FaBell className="h-5 w-5" />
+              <FaBell className="h-5 w-5" aria-hidden="true" />
               <span className="badge badge-sm indicator-item">3</span>
             </div>
           </div>
 
           {user ? <Profile user={user}/> : 
-            <button onClick={() => document.getElementById('my_modal_5').showModal()} className="btn bg-purple-yellow-gradient rounded-full px-8 py-3 text-white text-lg"> 
-              <FaUser />
+            <button 
+              onClick={() => document.getElementById('my_modal_5').showModal()} 
+              className="btn bg-purple-yellow-gradient rounded-full px-8 py-3 text-white text-lg"
+            > 
+              <FaUser aria-hidden="true" />
               Login
             </button>
           }
-          <Modal/>
+          <Modal />
         </div>
       </div>
     </header>

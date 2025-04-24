@@ -20,6 +20,8 @@
     "framer-motion": "^12.6.3",
     "leaflet": "^1.9.4",
     "localforage": "^1.10.0",
+    "lodash": "^4.17.21",
+    "lodash.debounce": "^4.0.8",
     "match-sorter": "^8.0.0",
     "multer": "^1.4.5-lts.2",
     "react": "^19.1.0",

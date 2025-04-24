@@ -28,4 +28,8 @@ router.delete("/:id", rentController.deleteRentItem);
 router.get("/nearby", rentController.getRentItemsNearby);
 
 
+router.get("/search-suggestions", rentController.searchSuggestions);
+
+
+
 module.exports = router;

@@ -190,6 +190,59 @@ const approveRentItem = async (req, res) => {
   }
 };
 
+const searchSuggestions = async (req, res) => {
+  try {
+    const searchTerm = req.query.q;
+    
+    if (!searchTerm || searchTerm.length < 3) {
+      return res.status(400).json({ message: "Search term must be at least 3 characters" });
+    }
+
+    const results = await Rent.aggregate([
+      {
+        $match: {
+          $and: [
+            { adminVerified: true },
+            {
+              $or: [
+                { title: { $regex: searchTerm, $options: "i" } },
+                { category: { $regex: searchTerm, $options: "i" } }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          category: 1,
+          score: {
+            $cond: [
+              { $regexMatch: { input: "$title", regex: searchTerm, options: "i" } },
+              2, // Higher score for title matches
+              1  // Lower score for category matches
+            ]
+          }
+        }
+      },
+      { $sort: { score: -1, title: 1 } }, // Sort by score then alphabetically
+      { $limit: 10 },
+      {
+        $project: {
+          _id: 1,
+          name: "$title", // Standardize as "name" for frontend
+          type: { $literal: "item" } // Optional: add type for future flexibility
+        }
+      }
+    ]);
+
+    res.status(200).json(results);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllRentItems,
   getAllItemsForAdmin,
@@ -199,5 +252,6 @@ module.exports = {
   rejectRentItem,
   deleteRentItem,
   getRentItemById,
-  getRentItemsNearby
+  getRentItemsNearby,
+  searchSuggestions
 };

@@ -30,6 +30,7 @@ import ChatPage from "../components/Chat/ChatPage";
 import ItemsMap from "../components/ItemsMap";
 import Earning from "../pages/dashboard/admin/Earning";
 import ConversationsList from "../components/Chat/ConversationsList";
+import AboutUs from "../components/AboutUs";
 
 const router = createBrowserRouter([
   {
@@ -96,6 +97,10 @@ const router = createBrowserRouter([
     element : <ConversationsList/>
   },
 
+  {
+    path : "/aboutus",
+    element : <AboutUs/>
+  },
 
   //payment routes 
   {

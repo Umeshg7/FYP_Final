@@ -91,7 +91,7 @@ const Navbar = () => {
         <a className="text-xl font-semibold py-3 px-6" href="/rent">For Rent </a>
       </li>
       <li>
-        <a className="text-xl font-semibold py-3 px-6" href="/about">About Us</a>
+        <a className="text-xl font-semibold py-3 px-6" href="/aboutus">About Us</a>
       </li>
     </>
   );

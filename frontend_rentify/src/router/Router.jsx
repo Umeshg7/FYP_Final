@@ -26,10 +26,10 @@ import AdminBookings from "../pages/dashboard/admin/AdminBookings";
 import UserBooking from "../pages/dashboard/user/UserBooking";
 import PaymentSuccess from "../components/Payment/PaymentSuccess"
 import Paymentfailure from "../components/Payment/PaymentFailure"
-import ConversationsList from "../components/Chat/ConversationsList";
-import ChatPage from "../components/Chat/chatPage";
+import ChatPage from "../components/Chat/ChatPage";
 import ItemsMap from "../components/ItemsMap";
 import Earning from "../pages/dashboard/admin/Earning";
+import ConversationsList from "../components/Chat/ConversationsList";
 
 const router = createBrowserRouter([
   {
@@ -87,12 +87,13 @@ const router = createBrowserRouter([
 
   //chat routes 
   {
-    path: "/chat",
-    element: <ConversationsList/>,
-  },
-  {
     path : "/chat/:conversationId",
     element : <ChatPage/>
+  },
+
+  {
+    path : "/chat",
+    element : <ConversationsList/>
   },
 
 

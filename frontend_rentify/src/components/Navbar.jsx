@@ -87,17 +87,8 @@ const Navbar = () => {
       <li>
         <a className="text-xl font-semibold py-3 px-6" href="/itemmap">View Nearby Items</a>
       </li>
-      <li tabIndex={0}>
-        <details>
-          <summary className="text-xl font-semibold py-3 px-6">For Rent</summary>
-          <ul className="p-2">
-            <li><a className="py-2 px-4" href="/rent">All</a></li>
-            <li><a className="py-2 px-4" href="/rent?category=Vehicles">Vehicles</a></li>
-            <li><a className="py-2 px-4" href="/rent?category=Electronics">Electronics</a></li>
-            <li><a className="py-2 px-4" href="/rent?category=Clothes">Clothes</a></li>
-            <li><a className="py-2 px-4" href="/rent?category=Camping Equipment">Camping equipment</a></li>
-          </ul>
-        </details>
+      <li>
+        <a className="text-xl font-semibold py-3 px-6" href="/rent">For Rent </a>
       </li>
       <li>
         <a className="text-xl font-semibold py-3 px-6" href="/about">About Us</a>

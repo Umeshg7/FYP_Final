@@ -1,10 +1,109 @@
 const Booking = require("../models/Booking");
 const Rent = require("../models/Rent");
 const User = require("../models/User");
+const Notification = require("../models/Notification");
 const { checkDateAvailability } = require('../../utils/bookingUtils');
 const nodemailer = require("nodemailer");
 const { transporter } = require('../../utils/email');
 const mongoose = require('mongoose');
+
+// Helper function to create notifications
+async function createNotification(userId, message, type, link, relatedBooking, relatedItem) {
+  try {
+    const notification = new Notification({
+      userId,
+      message,
+      type,
+      link: link || null,
+      relatedBooking: relatedBooking || null,
+      relatedItem: relatedItem || null,
+    });
+    await notification.save();
+  } catch (error) {
+    console.error("Error creating notification:", error);
+  }
+}
+
+// Helper function to update item's average rating
+async function updateItemAverageRating(itemId) {
+  try {
+    const result = await Booking.aggregate([
+      {
+        $match: {
+          item: new mongoose.Types.ObjectId(itemId),
+          'review.rating': { $exists: true, $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: '$item',
+          averageRating: { $avg: '$review.rating' },
+          reviewCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    if (result.length > 0) {
+      await Rent.findByIdAndUpdate(itemId, {
+        averageRating: parseFloat(result[0].averageRating.toFixed(1)),
+        reviewCount: result[0].reviewCount
+      });
+    }
+  } catch (error) {
+    console.error("Error updating item rating:", error);
+    throw error;
+  }
+}
+
+// Email sending functions
+const sendBookingEmail = async ({ to, bookingId, startDate, endDate, totalPrice }) => {
+  const mailOptions = {
+    from: `"Rental App" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: "📅 New Booking Request!",
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #6b46c1;">New Booking Alert!</h2>
+        <p>You have a new booking request:</p>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <p><strong>Booking ID:</strong> ${bookingId}</p>
+          <p><strong>Dates:</strong> ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}</p>
+          <p><strong>Total Price:</strong> $${totalPrice}</p>
+        </div>
+        <a href="http://localhost:5173/" 
+           style="display: inline-block; background: #6b46c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          View Booking
+        </a>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
+const sendCompletionEmail = async (booking) => {
+  const mailOptions = {
+    from: `"Rental App" <${process.env.GMAIL_USER}>`,
+    to: [booking.lender.email, booking.renter.email],
+    subject: "✅ Booking Completed!",
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #6b46c1;">Booking Completed!</h2>
+        <p>Your rental period has ended. Please leave a review:</p>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <p><strong>Item:</strong> ${booking.item.title}</p>
+          <p><strong>Rental Period:</strong> ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}</p>
+        </div>
+        <a href="http://yourapp.com/booking/${booking._id}/review" 
+           style="display: inline-block; background: #6b46c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          Leave a Review
+        </a>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
 
 // Create a new booking
 exports.createBooking = async (req, res) => {
@@ -36,6 +135,25 @@ exports.createBooking = async (req, res) => {
     });
 
     await booking.save();
+
+    // Send notifications
+    await createNotification(
+      lender,
+      `New booking request for ${itemDetails.title}`,
+      "booking",
+      `/bookings/${booking._id}`,
+      booking._id,
+      item
+    );
+
+    await createNotification(
+      renter,
+      `You requested to book ${itemDetails.title}`,
+      "booking",
+      `/bookings/${booking._id}`,
+      booking._id,
+      item
+    );
 
     sendBookingEmail({
       to: lenderEmail,
@@ -213,6 +331,56 @@ exports.updateBookingStatus = async (req, res) => {
       { new: true }
     ).populate(['lender', 'renter', 'item']);
 
+    // Create notifications for both parties
+    const statusMessages = {
+      payment_pending: {
+        lender: `Your booking request for ${updatedBooking.item.title} is awaiting payment`,
+        renter: `New booking request for ${updatedBooking.item.title} - awaiting payment`
+      },
+      confirmed: {
+        lender: `Your booking for ${updatedBooking.item.title} has been confirmed!`,
+        renter: `Booking confirmed for ${updatedBooking.item.title}`
+      },
+      active: {
+        lender: `Your rental of ${updatedBooking.item.title} is now active`,
+        renter: `Rental period for ${updatedBooking.item.title} has started`
+      },
+      completed: {
+        lender: `Your rental of ${updatedBooking.item.title} has been completed`,
+        renter: `Rental period for ${updatedBooking.item.title} has ended`
+      },
+      cancelled: {
+        lender: `Your booking for ${updatedBooking.item.title} has been cancelled`,
+        renter: `Booking cancelled for ${updatedBooking.item.title}`
+      },
+      rejected: {
+        lender: `Your booking request for ${updatedBooking.item.title} was rejected`,
+        renter: `Booking request rejected for ${updatedBooking.item.title}`
+      }
+    };
+
+    if (statusMessages[status]) {
+      // Lender notification
+      await createNotification(
+        updatedBooking.lender._id,
+        statusMessages[status].lender,
+        "booking",
+        `/bookings/${bookingId}`,
+        bookingId,
+        updatedBooking.item._id
+      );
+
+      // Renter notification
+      await createNotification(
+        updatedBooking.renter._id,
+        statusMessages[status].renter,
+        "booking",
+        `/bookings/${bookingId}`,
+        bookingId,
+        updatedBooking.item._id
+      );
+    }
+
     if (status === 'completed') {
       sendCompletionEmail(updatedBooking).catch(console.error);
     }
@@ -327,6 +495,25 @@ exports.markAsActive = async (req, res) => {
       { new: true }
     ).populate(['lender', 'renter', 'item']);
 
+    // Send notifications
+    await createNotification(
+      updatedBooking.lender._id,
+      `Your rental of ${updatedBooking.item.title} is now active`,
+      "booking",
+      `/user-dashboard/lent`,
+      bookingId,
+      updatedBooking.item._id
+    );
+
+    await createNotification(
+      updatedBooking.renter._id,
+      `Rental period for ${updatedBooking.item.title} has started`,
+      "booking",
+      `/user-dashboard/lent`,
+      bookingId,
+      updatedBooking.item._id
+    );
+
     res.json({
       success: true,
       message: "Booking marked as active - item handed over to renter",
@@ -370,6 +557,25 @@ exports.markAsCompleted = async (req, res) => {
       { new: true }
     ).populate(['lender', 'renter', 'item']);
 
+    // Send notifications
+    await createNotification(
+      updatedBooking.lender._id,
+      `Your rental of ${updatedBooking.item.title} has been completed`,
+      "booking",
+      `/user-dashboard/lent`,
+      bookingId,
+      updatedBooking.item._id
+    );
+
+    await createNotification(
+      updatedBooking.renter._id,
+      `Rental period for ${updatedBooking.item.title} has ended`,
+      "booking",
+      `/user-dashboard/lent`,
+      bookingId,
+      updatedBooking.item._id
+    );
+
     sendCompletionEmail(updatedBooking).catch(console.error);
 
     res.json({
@@ -387,13 +593,13 @@ exports.markAsCompleted = async (req, res) => {
     });
   }
 };
+
 // Submit a review for a booking
 exports.submitReview = async (req, res) => {
   try {
     const { bookingId } = req.params;
     const { rating, comment, reviewerRole } = req.body;
 
-    // Validate required fields
     if (!reviewerRole || !['lender', 'renter'].includes(reviewerRole)) {
       return res.status(400).json({
         success: false,
@@ -401,7 +607,6 @@ exports.submitReview = async (req, res) => {
       });
     }
 
-    // Validate rating
     if (typeof rating !== 'number' || isNaN(rating)) {
       return res.status(400).json({
         success: false,
@@ -418,13 +623,11 @@ exports.submitReview = async (req, res) => {
       });
     }
 
-    // Find booking
     const booking = await Booking.findById(bookingId);
     if (!booking) {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
-    // Check booking status
     if (booking.status !== 'completed') {
       return res.status(400).json({
         success: false,
@@ -432,7 +635,6 @@ exports.submitReview = async (req, res) => {
       });
     }
 
-    // Create review
     booking.review = {
       rating: Math.round(rating),
       comment: comment || '',
@@ -458,13 +660,11 @@ exports.submitReview = async (req, res) => {
   }
 };
 
-
 // Get reviews for an item
 exports.getItemReviews = async (req, res) => {
   try {
     const { itemId } = req.params;
 
-    // Find all completed bookings for this item that have reviews
     const reviews = await Booking.find({
       item: itemId,
       status: 'completed',
@@ -498,85 +698,3 @@ exports.getItemReviews = async (req, res) => {
     });
   }
 };
-
-// Helper function to update item's average rating
-async function updateItemAverageRating(itemId) {
-  try {
-    const result = await Booking.aggregate([
-      {
-        $match: {
-          item: new mongoose.Types.ObjectId(itemId), // Add 'new' keyword here
-          'review.rating': { $exists: true, $ne: null }
-        }
-      },
-      {
-        $group: {
-          _id: '$item',
-          averageRating: { $avg: '$review.rating' },
-          reviewCount: { $sum: 1 }
-        }
-      }
-    ]);
-
-    if (result.length > 0) {
-      await Rent.findByIdAndUpdate(itemId, {
-        averageRating: parseFloat(result[0].averageRating.toFixed(1)),
-        reviewCount: result[0].reviewCount
-      });
-    }
-  } catch (error) {
-    console.error("Error updating item rating:", error);
-    throw error; // Re-throw to handle in calling function
-  }
-}
-
-// Email sending functions
-const sendBookingEmail = async ({ to, bookingId, startDate, endDate, totalPrice }) => {
-  const mailOptions = {
-    from: `"Rental App" <${process.env.GMAIL_USER}>`,
-    to,
-    subject: "📅 New Booking Request!",
-    html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #6b46c1;">New Booking Alert!</h2>
-        <p>You have a new booking request:</p>
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
-          <p><strong>Booking ID:</strong> ${bookingId}</p>
-          <p><strong>Dates:</strong> ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}</p>
-          <p><strong>Total Price:</strong> $${totalPrice}</p>
-        </div>
-        <a href="http://localhost:5173/" 
-           style="display: inline-block; background: #6b46c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-          View Booking
-        </a>
-      </div>
-    `,
-  };
-
-  await transporter.sendMail(mailOptions);
-};
-
-const sendCompletionEmail = async (booking) => {
-  const mailOptions = {
-    from: `"Rental App" <${process.env.GMAIL_USER}>`,
-    to: [booking.lender.email, booking.renter.email],
-    subject: "✅ Booking Completed!",
-    html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #6b46c1;">Booking Completed!</h2>
-        <p>Your rental period has ended. Please leave a review:</p>
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
-          <p><strong>Item:</strong> ${booking.item.title}</p>
-          <p><strong>Rental Period:</strong> ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}</p>
-        </div>
-        <a href="http://yourapp.com/booking/${booking._id}/review" 
-           style="display: inline-block; background: #6b46c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-          Leave a Review
-        </a>
-      </div>
-    `,
-  };
-
-  await transporter.sendMail(mailOptions);
-};
-

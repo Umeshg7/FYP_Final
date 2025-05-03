@@ -1,6 +1,7 @@
 const Conversation = require("../models/Conversation");
 const Message = require("../models/Message");
 const User = require("../models/User");
+const Notification = require("../models/Notification"); // Add this import
 
 // Create or get conversation
 const getOrCreateConversation = async (req, res) => {
@@ -55,12 +56,28 @@ const getOrCreateConversation = async (req, res) => {
       console.error("Error in getOrCreateConversation:", error);
       res.status(500).json({ message: "Server error" });
     }
-  };
+};
 
-// Send a message
+// Send a message with notification
 const sendMessage = async (req, res) => {
   try {
     const { conversationId, sender, text } = req.body;
+
+    // Get conversation to identify participants
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+
+    // Identify the receiver (the other participant)
+    const receiver = conversation.participants.find(p => p !== sender);
+    if (!receiver) {
+      return res.status(400).json({ message: "Invalid conversation participants" });
+    }
+
+    // Get sender details for the notification
+    const senderUser = await User.findOne({ email: sender }, 'name photoURL');
+    const senderName = senderUser?.name || sender.split('@')[0];
 
     // Create new message
     const message = new Message({
@@ -76,6 +93,17 @@ const sendMessage = async (req, res) => {
     await Conversation.findByIdAndUpdate(conversationId, {
       lastMessage: message._id,
       updatedAt: new Date()
+    });
+
+    // Create notification for the receiver
+    await Notification.create({
+      userId: receiver,
+      message: `New message from ${senderName}: ${text.substring(0, 30)}${text.length > 30 ? '...' : ''}`,
+      type: "message",
+      relatedChat: conversationId,
+      sender: sender,
+      link: `/chats/${conversationId}`,
+      isRead: false
     });
 
     res.status(201).json(message);

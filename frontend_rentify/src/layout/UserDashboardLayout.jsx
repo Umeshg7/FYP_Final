@@ -34,7 +34,7 @@ const sharedLinks = (
       </Link>
     </li>
     <li>
-      <Link to="/menu">
+      <Link to="/chat/6816a0c318695f4db7a88347">
         <FaQuestionCircle /> Customer Support
       </Link>
     </li>

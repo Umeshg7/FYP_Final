@@ -365,7 +365,7 @@ exports.updateBookingStatus = async (req, res) => {
         updatedBooking.lender._id,
         statusMessages[status].lender,
         "booking",
-        `/bookings/${bookingId}`,
+        `/user-dashboard/lent`,
         bookingId,
         updatedBooking.item._id
       );
@@ -375,7 +375,7 @@ exports.updateBookingStatus = async (req, res) => {
         updatedBooking.renter._id,
         statusMessages[status].renter,
         "booking",
-        `/bookings/${bookingId}`,
+        `/user-dashboard/lent`,
         bookingId,
         updatedBooking.item._id
       );

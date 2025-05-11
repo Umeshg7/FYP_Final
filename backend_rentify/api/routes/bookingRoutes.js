@@ -29,7 +29,7 @@ router.patch("/:bookingId/active", bookingController.markAsActive);
 router.patch("/:bookingId/complete", bookingController.markAsCompleted);
 
 // Add review to booking
-router.post('/:bookingId/reviews', bookingController.submitReview); // Removed 'protect' middleware
+router.post('/:bookingId/reviews', bookingController.submitReview);
 router.get('/items/:itemId/reviews', bookingController.getItemReviews);
 
 router.patch('/:bookingId/verify-payment', async (req, res) => {

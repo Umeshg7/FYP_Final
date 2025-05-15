@@ -55,7 +55,7 @@ const KYCStatus = () => {
         {status === 'NEEDS_CORRECTION' && (
           <button 
             onClick={() => navigate('/kyc')}
-            className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="w-full py-2 px-4 bg-purple text-white rounded-md hover:bg-blue-700"
           >
             Update Your KYC
           </button>
@@ -63,7 +63,7 @@ const KYCStatus = () => {
 
         <button 
           onClick={() => navigate('/')}
-          className="w-full mt-4 py-2 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+          className="w-full mt-4 py-2 px-4 bg-purple text-white rounded-md hover:bg-gray-700"
         >
           Return Home
         </button>

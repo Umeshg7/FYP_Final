@@ -85,7 +85,7 @@ const UpdateProfile = () => {
       <div className="max-w-3xl mx-auto">
         {/* Profile Header */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-          <div className="relative h-40 bg-gradient-to-r from-blue-500 to-purple-600">
+          <div className="relative h-40 bg-gradient-to-r from-purple to-purple-600">
             {/* Cover Photo - Can be made editable if needed */}
           </div>
           

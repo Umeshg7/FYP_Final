@@ -52,7 +52,7 @@ const Login = () => {
     } catch (error) {
       let message = "Login failed";
       if (error.code === "auth/invalid-credential") {
-        message = "Invalid email or password";
+        message = <span className="text-red">Invalid email or password</span>
       } else if (error.code === "auth/too-many-requests") {
         message = "Account temporarily locked due to many failed attempts";
       }

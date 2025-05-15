@@ -242,6 +242,57 @@ const searchSuggestions = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// Update a rent item
+const updateRentItem = async (req, res) => {
+  try {
+    const rentId = req.params.id;
+    const updates = req.body;
+
+    // Validate the ID
+    if (!mongoose.Types.ObjectId.isValid(rentId)) {
+      return res.status(400).json({ message: "Invalid rent item ID" });
+    }
+
+    // Handle location updates if provided
+    if (updates.longitude || updates.latitude) {
+      updates.location = {
+        type: "Point",
+        coordinates: [
+          parseFloat(updates.longitude || 0),
+          parseFloat(updates.latitude || 0)
+        ],
+        address: updates.address || ""
+      };
+      
+      // Remove the individual fields to avoid duplicate data
+      delete updates.longitude;
+      delete updates.latitude;
+      delete updates.address;
+    }
+
+    // Find and update the item
+    const updatedItem = await Rent.findByIdAndUpdate(
+      rentId,
+      { 
+        ...updates,
+        adminVerified: false // Reset verification status on update
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedItem) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    res.status(200).json({
+      message: "Item updated successfully. Requires admin re-verification.",
+      updatedItem
+    });
+  } catch (error) {
+    console.error("Error updating rent item:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   getAllRentItems,
@@ -253,5 +304,6 @@ module.exports = {
   deleteRentItem,
   getRentItemById,
   getRentItemsNearby,
-  searchSuggestions
+  searchSuggestions,
+  updateRentItem
 };

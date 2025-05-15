@@ -1,8 +1,9 @@
 import React, { useState, useContext } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { FcGoogle } from "react-icons/fc"; // More colorful Google icon
+import { FcGoogle } from "react-icons/fc";
 import { IoClose } from "react-icons/io5";
 import { useForm } from "react-hook-form";
+import Swal from "sweetalert2"; // ✅ SweetAlert2
 import { AuthContext } from "../Contexts/AuthProvider";
 import useAxiosPublic from "../hooks/useAxiosPublic";
 import logo from "/logo.png";
@@ -30,10 +31,8 @@ const Signup = () => {
       const result = await createUser(data.email, data.password);
       const user = result.user;
 
-      // Update user profile with name
       await updateUserProfile(data.name, "");
 
-      // Prepare user data for MongoDB
       const userInfo = {
         _id: user.uid,
         name: data.name,
@@ -43,7 +42,6 @@ const Signup = () => {
         createdAt: new Date()
       };
 
-      // Check if user exists before creating
       try {
         await axiosPublic.get(`/users/${user.uid}`);
       } catch (error) {
@@ -52,7 +50,15 @@ const Signup = () => {
         }
       }
 
-      navigate(from, { replace: true });
+      Swal.fire({
+        icon: 'success',
+        title: 'Account created!',
+        text: 'Your account has been successfully created.',
+        confirmButtonText: 'OK',
+      }).then(() => {
+        navigate(from, { replace: true });
+      });
+
     } catch (error) {
       console.error("Signup error:", error);
       let message = "Signup failed";
@@ -84,7 +90,6 @@ const Signup = () => {
         createdAt: new Date()
       };
 
-      // Check if user exists before creating
       try {
         await axiosPublic.get(`/users/${user.uid}`);
       } catch (error) {
@@ -93,12 +98,20 @@ const Signup = () => {
         }
       }
 
-      navigate(from, { replace: true });
+      Swal.fire({
+        icon: 'success',
+        title: 'Signed up with Google!',
+        text: 'Your account has been successfully created.',
+        confirmButtonText: 'OK',
+      }).then(() => {
+        navigate(from, { replace: true });
+      });
+
     } catch (error) {
       console.error("Google signup error:", error);
       setErrorMessage(
-        error.code === "auth/popup-closed-by-user" 
-          ? "Google sign-up was canceled" 
+        error.code === "auth/popup-closed-by-user"
+          ? "Google sign-up was canceled"
           : "Failed to sign up with Google"
       );
     } finally {
@@ -116,7 +129,7 @@ const Signup = () => {
         >
           <IoClose size={24} />
         </button>
-        
+
         <div className="text-center mb-4">
           <img src={logo} alt="RentifyHub" className="h-12 mx-auto" />
           <h3 className="text-xl font-bold mt-2">Create an Account</h3>
@@ -129,7 +142,7 @@ const Signup = () => {
               type="text"
               placeholder="Your Name"
               className="input input-bordered w-full"
-              {...register("name", { 
+              {...register("name", {
                 required: "Name is required",
                 minLength: {
                   value: 3,
@@ -147,7 +160,7 @@ const Signup = () => {
               type="email"
               placeholder="your-email@example.com"
               className="input input-bordered w-full"
-              {...register("email", { 
+              {...register("email", {
                 required: "Email is required",
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -165,7 +178,7 @@ const Signup = () => {
               type="password"
               placeholder="••••••••"
               className="input input-bordered w-full"
-              {...register("password", { 
+              {...register("password", {
                 required: "Password is required",
                 minLength: {
                   value: 6,
@@ -182,8 +195,8 @@ const Signup = () => {
           )}
 
           <div className="form-control mt-6">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="btn bg-purple-yellow-gradient text-white w-full"
               disabled={loading}
             >
@@ -206,7 +219,7 @@ const Signup = () => {
             onClick={handleGoogleRegister}
             disabled={loading}
           >
-            <FcGoogle className="text-xl" /> 
+            <FcGoogle className="text-xl" />
             {loading ? 'Signing up...' : 'Sign Up With Google'}
           </button>
         </div>

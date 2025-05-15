@@ -16,7 +16,7 @@ const UserDetails = () => {
     <div className="max-w-3xl mx-auto p-4">
       {/* Facebook-like Profile Header */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-        <div className="relative h-40 bg-gradient-to-r from-blue-500 to-purple-600">
+        <div className="relative h-40 bg-gradient-to-r from-purple to-purple-600">
           {/* Cover Photo - You can add actual cover photo logic if available */}
         </div>
         

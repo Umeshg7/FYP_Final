@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import useAxiosPublic from "../../../hooks/useAxiosPublic";
 import useAuth from "../../../hooks/useAuth";
+import Swal from 'sweetalert2';
 import {
   MapContainer,
   TileLayer,
@@ -23,12 +24,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// Optional: Red icon for selected location
+// Red icon for selected location
 const redIcon = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -46,14 +45,12 @@ const AddRentItem = () => {
   const { user } = useAuth();
 
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [position, setPosition] = useState(null);
   const [address, setAddress] = useState("");
-  const [mapCenter, setMapCenter] = useState([27.700769, 85.30014]); // Default to Kathmandu
+  const [mapCenter, setMapCenter] = useState([27.700769, 85.30014]);
 
-  // Get live location on mount
   useEffect(() => {
     const getLocation = async () => {
       if (navigator.geolocation) {
@@ -73,7 +70,6 @@ const AddRentItem = () => {
           await reverseGeocode(latitude, longitude);
         } catch (error) {
           console.warn("Geolocation error:", error);
-          // Fallback to default position if geolocation is denied
           setMapCenter([27.700769, 85.30014]);
           setPosition([27.700769, 85.30014]);
           setValue("latitude", 27.700769);
@@ -172,7 +168,6 @@ const AddRentItem = () => {
       return;
     }
 
-    // Explicitly check for valid coordinates
     if (!data.latitude || !data.longitude || isNaN(data.latitude) || isNaN(data.longitude)) {
       setError("Please select a valid location on the map.");
       return;
@@ -180,7 +175,6 @@ const AddRentItem = () => {
 
     setUploading(true);
     setError("");
-    setSuccess("");
 
     try {
       const hostedImageUrls = await uploadImagesToImgBB(images);
@@ -190,8 +184,8 @@ const AddRentItem = () => {
         description: data.description,
         category: data.category,
         pricePerDay: parseFloat(data.pricePerDay),
-        longitude: parseFloat(data.longitude),  // Send as separate fields
-        latitude: parseFloat(data.latitude),    // Send as separate fields
+        longitude: parseFloat(data.longitude),
+        latitude: parseFloat(data.latitude),
         address: address,
         userEmail: user.email,
         userId: user.uid,
@@ -199,18 +193,34 @@ const AddRentItem = () => {
         images: hostedImageUrls,
         adminVerified: false,
       };
-      console.log("data is :", rentItemData)
 
       const response = await axiosPublic.post("/rent", rentItemData);
-      console.log("Item added successfully:", response.data);
-      setSuccess("Item added successfully!");
-      reset();
-      setPosition(null);
-      setAddress("");
-      setImages([]);
+      
+      // Show success alert
+      Swal.fire({
+        title: 'Success!',
+        text: 'Item added successfully!',
+        icon: 'success',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#4f46e5'
+      }).then(() => {
+        reset();
+        setPosition(null);
+        setAddress("");
+        setImages([]);
+      });
+
     } catch (error) {
       console.error("Error adding item:", error);
-      setError(error.response?.data?.message || "Failed to add item. Please try again.");
+      
+      // Show error alert
+      Swal.fire({
+        title: 'Error!',
+        text: error.response?.data?.message || "Failed to add item. Please try again.",
+        icon: 'error',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ef4444'
+      });
     } finally {
       setUploading(false);
     }
@@ -228,15 +238,6 @@ const AddRentItem = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>{error}</span>
-        </div>
-      )}
-      
-      {success && (
-        <div className="alert alert-success mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>{success}</span>
         </div>
       )}
 

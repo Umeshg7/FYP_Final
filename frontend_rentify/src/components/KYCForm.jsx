@@ -559,7 +559,7 @@ const KYCForm = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="px-6 py-2 bg-purple text-white rounded-md hover:bg-blue-700"
                   disabled={loading}
                 >
                   {loading ? "Submitting..." : "Submit"}

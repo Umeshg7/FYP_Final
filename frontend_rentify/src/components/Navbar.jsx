@@ -381,17 +381,7 @@ const Navbar = () => {
                   )}
                 </div>
                 
-                <div className="p-2 border-t border-gray-200 text-center bg-gray-50">
-                  <button 
-                    onClick={() => {
-                      navigate('/notifications');
-                      setShowNotifications(false);
-                    }}
-                    className="text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    View all notifications
-                  </button>
-                </div>
+  
               </div>
             )}
           </div>

@@ -31,5 +31,7 @@ router.get("/nearby", rentController.getRentItemsNearby);
 router.get("/search-suggestions", rentController.searchSuggestions);
 
 
+// Update a rent item
+router.put("/:id", rentController.updateRentItem);
 
 module.exports = router;

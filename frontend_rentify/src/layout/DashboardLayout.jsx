@@ -47,6 +47,11 @@ const sharedLinks = (
       <BsChatLeftDotsFill/>Chat
       </Link>
     </li>
+        <li>
+      <Link to ="/admin-dashboard/reportadmin">
+      <BsChatLeftDotsFill/>Reported History
+      </Link>
+    </li>
   </>
 );
 

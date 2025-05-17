@@ -73,7 +73,7 @@ const ProblemReportForm = () => {
         createdAt: new Date().toISOString(),
       };
 
-      await axiosPublic.post("/reports", reportData);
+      await axiosPublic.post("/report", reportData);
 
       Swal.fire({
         title: "Report Submitted!",

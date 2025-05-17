@@ -33,6 +33,7 @@ import ConversationsList from "../components/Chat/ConversationsList";
 import AboutUs from "../components/AboutUs";
 import MessageBot from "../pages/dashboard/admin/MessageBot";
 import ProblemReportForm from "../pages/dashboard/user/ProblemReportForm";
+import AdminReportsPage from "../pages/dashboard/admin/AdminReportPage";
 
 const router = createBrowserRouter([
   {
@@ -152,6 +153,10 @@ const router = createBrowserRouter([
       {
         path: "earning",
         element: <Earning/>,
+      },
+      {
+        path: "reportadmin",
+        element: <AdminReportsPage/>,
       },
             {
         path: "mbot",

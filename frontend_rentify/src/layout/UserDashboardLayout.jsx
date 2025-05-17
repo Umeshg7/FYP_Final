@@ -43,6 +43,11 @@ const sharedLinks = (
         < BsChatLeftTextFill/> Chat
       </Link>
     </li>
+        <li>
+      <Link to="/user-dashboard/report">
+        < BsChatLeftTextFill/> Report Problem to Admin
+      </Link>
+    </li>
   </>
 );
 

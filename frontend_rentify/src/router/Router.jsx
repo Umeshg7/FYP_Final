@@ -32,6 +32,7 @@ import Earning from "../pages/dashboard/admin/Earning";
 import ConversationsList from "../components/Chat/ConversationsList";
 import AboutUs from "../components/AboutUs";
 import MessageBot from "../pages/dashboard/admin/MessageBot";
+import ProblemReportForm from "../pages/dashboard/user/ProblemReportForm";
 
 const router = createBrowserRouter([
   {
@@ -173,6 +174,10 @@ const router = createBrowserRouter([
       {
         path: "manageitems",
         element: <Manageuseritems/>,
+      },
+            {
+        path: "report",
+        element: <ProblemReportForm/>,
       },
       {
         path: "lent",

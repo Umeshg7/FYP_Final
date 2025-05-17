@@ -194,7 +194,7 @@ const MessageBot = () => {
                         </button>
                         <button
                           onClick={() => handleDelete(message.key)}
-                          className="btn btn-sm bg-red-500 text-white hover:bg-red-600"
+                          className="btn btn-sm bg-red-500 text-red hover:bg-white"
                         >
                           <FaTrashAlt />
                         </button>

@@ -45,6 +45,7 @@ const sharedLinks = (
     <li>
       <Link to ="/chat">
       <BsChatLeftDotsFill/>Chat
+      
       </Link>
     </li>
         <li>

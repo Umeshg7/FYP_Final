@@ -63,6 +63,7 @@ const kycRoutes = require("./api/routes/KYCRoutes");
 const bookingRoutes = require("./api/routes/bookingRoutes");
 const messageRoutes = require("./api/routes/messageRoutes");
 const notificationRoutes = require("./api/routes/notificationRoutes");
+const botMessageRoutes = require("./api/routes/botMessageRoutes")
 // Use Routes
 app.use("/rent", rentRoutes);
 app.use("/users", userRoutes);
@@ -70,6 +71,7 @@ app.use("/kyc", kycRoutes);
 app.use("/bookings", bookingRoutes);
 app.use("/messages", messageRoutes);
 app.use("/notifications", notificationRoutes)
+app.use("/botmessage", botMessageRoutes)
 
 
 // Root Route

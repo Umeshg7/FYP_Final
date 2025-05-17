@@ -38,8 +38,8 @@ const sharedLinks = (
       </Link>
     </li>
     <li>
-      <Link to="/menu">
-        <FaQuestionCircle /> Send Notification
+      <Link to="/admin-dashboard/mbot">
+        <FaQuestionCircle /> Add Message in Bot
       </Link>
     </li>
     <li>

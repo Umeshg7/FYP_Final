@@ -31,6 +31,7 @@ import ItemsMap from "../components/ItemsMap";
 import Earning from "../pages/dashboard/admin/Earning";
 import ConversationsList from "../components/Chat/ConversationsList";
 import AboutUs from "../components/AboutUs";
+import MessageBot from "../pages/dashboard/admin/MessageBot";
 
 const router = createBrowserRouter([
   {
@@ -150,6 +151,10 @@ const router = createBrowserRouter([
       {
         path: "earning",
         element: <Earning/>,
+      },
+            {
+        path: "mbot",
+        element: <MessageBot/>,
       },
     ],
   },

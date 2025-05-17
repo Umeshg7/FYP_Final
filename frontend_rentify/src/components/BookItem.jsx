@@ -407,65 +407,82 @@ const BookItem = () => {
   };
 
   const initiateEsewaPayment = async () => {
-    if (!startDate || !endDate || !acceptedTerms) return;
+  // Validate inputs with specific error messages
+  if (!startDate || !endDate) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Booking Dates Required',
+      text: 'Please select your booking dates first',
+    });
+    return;
+  }
+
+  if (!acceptedTerms) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Terms Not Accepted',
+      text: 'Please accept the terms and conditions to proceed',
+    });
+    return;
+  }
+
+  try {
+    setSubmitting(true);
     
-    try {
-      setSubmitting(true);
-      
-      const bookingId = await createBooking();
-      setCurrentBookingId(bookingId);
-      
-      const totalDays = differenceInDays(endDate, startDate) + 1;
-      const totalPrice = totalDays * item.pricePerDay;
-      const bookingPayment = Math.round(totalPrice * 0.1);
+    const bookingId = await createBooking();
+    setCurrentBookingId(bookingId);
+    
+    const totalDays = differenceInDays(endDate, startDate) + 1;
+    const totalPrice = totalDays * item.pricePerDay;
+    const bookingPayment = Math.round(totalPrice * 0.1);
 
-      const secretKey = "8gBm/:&EnhH.1/q";
-      const transactionUUID = `txn_${Date.now()}_${bookingId}`;
-      const totalAmount = bookingPayment;
-      const productCode = "EPAYTEST";
-      const signedFieldNames = "total_amount,transaction_uuid,product_code";
+    const secretKey = "8gBm/:&EnhH.1/q";
+    const transactionUUID = `txn_${Date.now()}_${bookingId}`;
+    const totalAmount = bookingPayment;
+    const productCode = "EPAYTEST";
+    const signedFieldNames = "total_amount,transaction_uuid,product_code";
 
-      const signatureBase = `total_amount=${totalAmount},transaction_uuid=${transactionUUID},product_code=${productCode}`;
-      const signature = CryptoJS.HmacSHA256(signatureBase, secretKey).toString(CryptoJS.enc.Base64);
+    const signatureBase = `total_amount=${totalAmount},transaction_uuid=${transactionUUID},product_code=${productCode}`;
+    const signature = CryptoJS.HmacSHA256(signatureBase, secretKey).toString(CryptoJS.enc.Base64);
 
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
 
-      const formData = {
-        amount: totalAmount,
-        tax_amount: 0,
-        total_amount: totalAmount,
-        transaction_uuid: transactionUUID,
-        product_code: productCode,
-        product_service_charge: 0,
-        product_delivery_charge: 0,
+    const formData = {
+      amount: totalAmount,
+      tax_amount: 0,
+      total_amount: totalAmount,
+      transaction_uuid: transactionUUID,
+      product_code: productCode,
+      product_service_charge: 0,
+      product_delivery_charge: 0,
         success_url: `http://localhost:5173/payment/success`,
         failure_url: `http://localhost:5173/payment/failure`,
-        signed_field_names: signedFieldNames,
-        signature: signature,
-      };
+      signed_field_names: signedFieldNames,
+      signature: signature,
+    };
 
-      Object.entries(formData).forEach(([key, value]) => {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = key;
-        input.value = String(value);
-        form.appendChild(input);
-      });
+    Object.entries(formData).forEach(([key, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = String(value);
+      form.appendChild(input);
+    });
 
-      document.body.appendChild(form);
-      form.submit();
-    } catch (err) {
-      console.error("Esewa initiation error:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Payment Error",
-        text: "Failed to initiate payment",
-      });
-      setSubmitting(false);
-    }
-  };
+    document.body.appendChild(form);
+    form.submit();
+  } catch (err) {
+    console.error("Esewa initiation error:", err);
+    Swal.fire({
+      icon: "error",
+      title: "Payment Error",
+      text: err.message || "Failed to initiate payment",
+    });
+    setSubmitting(false);
+  }
+};
 
   const TermsModal = () => {
     return (
@@ -818,18 +835,17 @@ const BookItem = () => {
 
                 {/* Payment Button */}
                 <div className="mt-6">
-                  <button 
-                    onClick={initiateEsewaPayment}
-                    disabled={submitting || !startDate || !endDate || !acceptedTerms}
-                    className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
-                      submitting || !startDate || !endDate || !acceptedTerms
-                        ? "bg-[#55D046] cursor-not-allowed opacity-70"
-                        : "bg-[#55D046] hover:bg-[#4bb53d]"
-                    }`}
-                  >
-                    {submitting ? "Processing..." : "Pay with eSewa"}
-                  </button>
-                </div>
+                    <button 
+                      onClick={initiateEsewaPayment}
+                      className={`w-full py-3 px-4 rounded-lg text-white font-medium ${
+                        submitting ? "bg-[#55D046] cursor-not-allowed opacity-70" :
+                        (!startDate || !endDate || !acceptedTerms) ? "bg-[#55D046] cursor-pointer opacity-70" :
+                        "bg-[#55D046] hover:bg-[#4bb53d]"
+                      }`}
+                    >
+                      {submitting ? "Processing..." : "Pay with eSewa"}
+                    </button>
+                  </div>
               </div>
             </div>
           </div>
@@ -848,7 +864,7 @@ const BookItem = () => {
               alt="Selected"
               className="max-w-full max-h-[80vh] object-contain rounded-lg"
               onError={(e) => {
-                e.target.src = "https://via.placeholder.com/800";
+                e.target.src = "";
               }}
             />
             <div className="flex justify-center mt-4">

@@ -257,7 +257,7 @@ const calculateTotals = () => {
                 </td>
                 <td>
                   <div className="font-semibold">
-                    ${booking.totalPrice?.toFixed(2)}
+                    NPR: {booking.totalPrice?.toFixed(2)}
                     <div className="text-xs text-gray-500">{amountLabel}</div>
                   </div>
                 </td>
@@ -405,7 +405,7 @@ const calculateTotals = () => {
             <div className="space-y-2">
               <p><strong>Item:</strong> {selectedBooking.item?.title}</p>
               <p><strong>Dates:</strong> {formatDate(selectedBooking.startDate)} to {formatDate(selectedBooking.endDate)}</p>
-              <p><strong>Total:</strong> ${selectedBooking.totalPrice?.toFixed(2)}</p>
+              <p><strong>Total:</strong> NPR: {selectedBooking.totalPrice?.toFixed(2)}</p>
               <p><strong>Status:</strong> <StatusBadge status={selectedBooking.status} /></p>
               {selectedBooking.cancellationReason && (
                 <p><strong>Cancellation Reason:</strong> {selectedBooking.cancellationReason}</p>
@@ -447,7 +447,7 @@ const calculateTotals = () => {
                     <button
                       key={star}
                       onClick={() => setRating(star)}
-                      className={`text-3xl ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                      className={`text-3xl ${star <= rating ? 'text-yellow' : 'text-gray-300'}`}
                     >
                       <FaStar />
                     </button>
@@ -475,7 +475,7 @@ const calculateTotals = () => {
                 </div>
                 <div className="flex gap-2">
                   <button 
-                    className="btn btn-ghost"
+                    className="btn bg-gray-300 btn-ghost"
                     onClick={() => {
                       setBookingToReview(null);
                       setRating(0);
@@ -485,7 +485,7 @@ const calculateTotals = () => {
                     Cancel
                   </button>
                   <button 
-                    className="btn btn-primary"
+                    className="btn bg-purple text-white"
                     onClick={handleSubmitReview}
                     disabled={!rating}
                   >

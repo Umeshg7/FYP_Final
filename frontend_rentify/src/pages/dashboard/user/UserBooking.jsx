@@ -48,20 +48,30 @@ const UserBookings = () => {
     booking.lender?._id !== user?.uid && booking.lender !== user?.uid
   );
 
-  // Calculate financial summaries
-const calculateTotals = () => {
-  const earnings = lendingBookings
-    .filter(booking => booking.status === "completed")
-    .reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
-  
-  const spent = rentingBookings
-    .filter(booking => booking.status === "completed")
-    .reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
-  
-  return { earnings, spent };
-};
+  // Calculate financial summaries with platform fees
+  const calculateTotals = () => {
+    const platformFeeRate = 0.10; // 10% platform fee
+    
+    const allEarnings = lendingBookings
+      .filter(booking => booking.status === "completed")
+      .reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
+    
+    const platformFees = allEarnings * platformFeeRate;
+    const netEarnings = allEarnings - platformFees;
+    
+    const spent = rentingBookings
+      .filter(booking => booking.status === "completed")
+      .reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
+    
+    return { 
+      grossEarnings: allEarnings,
+      platformFees,
+      netEarnings,
+      spent 
+    };
+  };
 
-  const { earnings, spent } = calculateTotals();
+  const { grossEarnings, platformFees, netEarnings, spent } = calculateTotals();
 
   // Handle status updates
   const handleUpdateStatus = async (bookingId, newStatus) => {
@@ -98,8 +108,6 @@ const calculateTotals = () => {
       setActionLoading(false);
     }
   };
-
-  console.log("Current token:", localStorage.getItem('access-token'));
 
   // Handle review submission
   const handleSubmitReview = async () => {
@@ -169,6 +177,7 @@ const calculateTotals = () => {
       }
     }
   };
+
   // Format date display
   const formatDate = (dateString) => format(new Date(dateString), 'MMM dd, yyyy');
 
@@ -259,6 +268,11 @@ const calculateTotals = () => {
                   <div className="font-semibold">
                     NPR: {booking.totalPrice?.toFixed(2)}
                     <div className="text-xs text-gray-500">{amountLabel}</div>
+                    {role === "lender" && booking.status === "completed" && (
+                      <div className="text-xs text-gray-500">
+                        (You get: NPR {(booking.totalPrice * 0.9).toFixed(2)})
+                      </div>
+                    )}
                   </div>
                 </td>
                 <td>
@@ -406,6 +420,9 @@ const calculateTotals = () => {
               <p><strong>Item:</strong> {selectedBooking.item?.title}</p>
               <p><strong>Dates:</strong> {formatDate(selectedBooking.startDate)} to {formatDate(selectedBooking.endDate)}</p>
               <p><strong>Total:</strong> NPR: {selectedBooking.totalPrice?.toFixed(2)}</p>
+              {(selectedBooking.lender?._id === user?.uid || selectedBooking.lender === user?.uid) && selectedBooking.status === "completed" && (
+                <p><strong>Your Earnings:</strong> NPR {(selectedBooking.totalPrice * 0.9).toFixed(2)} (after 10% platform fee)</p>
+              )}
               <p><strong>Status:</strong> <StatusBadge status={selectedBooking.status} /></p>
               {selectedBooking.cancellationReason && (
                 <p><strong>Cancellation Reason:</strong> {selectedBooking.cancellationReason}</p>
@@ -499,25 +516,39 @@ const calculateTotals = () => {
       )}
 
       {/* Dashboard Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="stats shadow">
           <div className="stat">
-            <div className="stat-title">Total Bookings</div>
-            <div className="stat-value">{bookings.length}</div>
+            <div className="stat-title ">Total Bookings</div>
+            <div className="stat-value ">{bookings.length}</div>
           </div>
         </div>
         
         <div className="stats shadow bg-green-50">
           <div className="stat">
-            <div className="stat-title">Earnings (as Lender)</div>
-            <div className="stat-value">NPR : {earnings.toFixed(2)}</div>
+            <div className="stat-title">Gross Earnings</div>
+            <div className="stat-value">NPR {grossEarnings.toFixed(2)}</div>
+            <div className="stat-desc">Before platform fees</div>
+          </div>
+        </div>
+        
+        <div className="stats shadow bg-yellow-50">
+          <div className="stat">
+            <div className="stat-title flex items-center gap-1">
+              Platform Fees (10%)
+              <div className="tooltip" data-tip="10% of gross earnings goes to the platform">
+                <FaInfoCircle className="text-gray-500 text-sm" />
+              </div>
+            </div>
+            <div className="stat-value">NPR {platformFees.toFixed(2)}</div>
           </div>
         </div>
         
         <div className="stats shadow bg-blue-50">
           <div className="stat">
-            <div className="stat-title">Spent (as Renter)</div>
-            <div className="stat-value">NPR : {spent.toFixed(2)}</div>
+            <div className="stat-title">Net Earnings</div>
+            <div className="stat-value">NPR {netEarnings.toFixed(2)}</div>
+            <div className="stat-desc">After platform fees</div>
           </div>
         </div>
       </div>

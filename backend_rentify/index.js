@@ -65,6 +65,9 @@ const messageRoutes = require("./api/routes/messageRoutes");
 const notificationRoutes = require("./api/routes/notificationRoutes");
 const botMessageRoutes = require("./api/routes/botMessageRoutes")
 const reportRoutes = require("./api/routes/report")
+const dashboardRoutes = require("./api/routes/dashboardRoutes");
+
+
 // Use Routes
 app.use("/rent", rentRoutes);
 app.use("/users", userRoutes);
@@ -74,6 +77,7 @@ app.use("/messages", messageRoutes);
 app.use("/notifications", notificationRoutes)
 app.use("/botmessage", botMessageRoutes)
 app.use("/report", reportRoutes)
+app.use("/dashboard", dashboardRoutes);
 
 
 // Root Route

@@ -34,6 +34,7 @@ import AboutUs from "../components/AboutUs";
 import MessageBot from "../pages/dashboard/admin/MessageBot";
 import ProblemReportForm from "../pages/dashboard/user/ProblemReportForm";
 import AdminReportsPage from "../pages/dashboard/admin/AdminReportPage";
+import UserDashboard from "../pages/dashboard/user/UserDashboard";
 
 const router = createBrowserRouter([
   {
@@ -171,7 +172,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "",
-        element: <Dashboard />,
+        element: <UserDashboard />,
       },
       {
         path: "addrent",

@@ -24,7 +24,7 @@ const sharedLinks = (
       </Link>
     </li>
     <li>
-      <Link to="">
+      <Link to="/rent">
         <FaCartShopping /> Renting Items
       </Link>
     </li>

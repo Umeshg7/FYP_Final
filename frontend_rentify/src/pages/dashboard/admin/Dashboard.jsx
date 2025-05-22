@@ -118,7 +118,7 @@ const Dashboard = () => {
                       backgroundColor: 'rgba(79, 70, 229, 0.1)',
                       borderColor: '#4f46e5',
                       borderWidth: 2,
-                      tension: 0.4,
+                      tension: 0.4, 
                       pointRadius: 5,
                       pointHoverRadius: 7,
                       fill: true

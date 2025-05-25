@@ -9,4 +9,4 @@ const useAuth = () => {
   return context;
 };
 
-export default useAuth;  // Keep default export
+export default useAuth; 

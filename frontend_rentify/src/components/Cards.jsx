@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { FaHeart } from 'react-icons/fa';
 
 const Cards = ({ item }) => {
@@ -8,6 +8,9 @@ const Cards = ({ item }) => {
   const handleHeartClick = () => {
     setIsHeartFilled(!isHeartFilled);
   };
+
+  const rentNow = () => {
+  }
 
   // Function to truncate description to 100 characters
   const truncateDescription = (text) => {
@@ -48,7 +51,7 @@ const Cards = ({ item }) => {
               <span className="text-sm text-red-500">Rs. </span>
               {item.pricePerDay}
             </h5>
-            <button className="btn bg-purple-yellow-gradient text-white">
+            <button className="btn bg-purple-yellow-gradient text-white" onClick={rentNow}>
               Rent Now
             </button>
           </div>

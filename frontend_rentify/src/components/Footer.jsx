@@ -32,8 +32,7 @@ const Footer = () => {
           {/* Added onClick event to scroll to top */}
           <a className="link link-hover" onClick={scrollToTop}>Home</a>
           <a className="link link-hover" onClick={scrollToMedium}>Popular Categories</a>
-          <a href="/products" className="link link-hover">View Rent Items</a>
-          <a href="/order" className="link link-hover">Orders</a>
+          <a href="/rent" className="link link-hover">View Rent Items</a>
         </nav>
         <nav>
           <header className="footer-title">Contact Us</header>

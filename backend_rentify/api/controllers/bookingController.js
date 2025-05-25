@@ -68,7 +68,7 @@ const sendBookingEmail = async ({ to, bookingId, startDate, endDate, totalPrice 
         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
           <p><strong>Booking ID:</strong> ${bookingId}</p>
           <p><strong>Dates:</strong> ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}</p>
-          <p><strong>Total Price:</strong> $${totalPrice}</p>
+          <p><strong>Total Price:</strong> NPR: ${totalPrice}</p>
         </div>
         <a href="http://localhost:5173/" 
            style="display: inline-block; background: #6b46c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
@@ -94,7 +94,7 @@ const sendCompletionEmail = async (booking) => {
           <p><strong>Item:</strong> ${booking.item.title}</p>
           <p><strong>Rental Period:</strong> ${booking.startDate.toLocaleDateString()} to ${booking.endDate.toLocaleDateString()}</p>
         </div>
-        <a href="http://yourapp.com/booking/${booking._id}/review" 
+        <a href="http://localhost:5173/user-dashboard/lent" 
            style="display: inline-block; background: #6b46c1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
           Leave a Review
         </a>

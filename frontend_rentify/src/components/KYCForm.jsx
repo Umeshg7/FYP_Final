@@ -152,7 +152,7 @@ const KYCForm = () => {
           const response = await axios.post(
             "https://api.imgbb.com/1/upload", 
             formDataToSend,
-            { params: { key: import.meta.env.VITE_IMAGE_HOSTING_KEY } }
+            { params: { key: import.meta.env.VITE_IMAGE_HOSTING_KEY1 } }
           );
           return response.data.data.url;
         })

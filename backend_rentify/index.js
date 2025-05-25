@@ -67,7 +67,6 @@ const botMessageRoutes = require("./api/routes/botMessageRoutes")
 const reportRoutes = require("./api/routes/report")
 const dashboardRoutes = require("./api/routes/dashboardRoutes");
 
-
 // Use Routes
 app.use("/rent", rentRoutes);
 app.use("/users", userRoutes);
@@ -78,7 +77,6 @@ app.use("/notifications", notificationRoutes)
 app.use("/botmessage", botMessageRoutes)
 app.use("/report", reportRoutes)
 app.use("/dashboard", dashboardRoutes);
-
 
 // Root Route
 app.get("/", (req, res) => res.send(" RentifyHub Backend is Running!"));

@@ -12,7 +12,7 @@ import Users from "../pages/dashboard/admin/Users";
 import AddRentItem from "../pages/dashboard/admin/AddRentItem";
 import VerifyItem from "../pages/dashboard/admin/verifyItem";
 import ManageItems from "../pages/dashboard/admin/ManageItems";
-import ItemDetail from "../components/ItemDetails"; // Add the import here
+import ItemDetail from "../components/ItemDetails";
 import ItemDetails from "../components/ItemDetails";
 import KYCForm from "../components/KYCForm";
 import AdminPanel from "../pages/dashboard/admin/AdminPanel";
@@ -58,8 +58,8 @@ const router = createBrowserRouter([
         element: <UserDetails/>,
       },
       {
-        path: "/item/:id", // This is the dynamic route for item details
-        element: <ItemDetails />, // Add the component here
+        path: "/item/:id",
+        element: <ItemDetails />,
       },
     ],
   },
@@ -88,7 +88,6 @@ const router = createBrowserRouter([
     path : "kycverify",
     element : <KYCForm/>
   },
-
 
   //chat routes 
   {

@@ -25,7 +25,7 @@ const Footer = () => {
         <nav>
           <header className="footer-title">Useful links</header>
           <a href="/aboutus"className="link link-hover" >About us</a>
-          <a href="update-profile" className="link link-hover">View profile</a>
+          <a href="/updateprofile" className="link link-hover">View profile</a>
         </nav>
         <nav>
           <header className="footer-title">Main Links</header>

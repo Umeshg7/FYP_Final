@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const ConversationSchema = new mongoose.Schema({
   participants: {
-    type: [String], // Array of user emails
+    type: [String],
     required: true,
     validate: {
       validator: function(arr) {
